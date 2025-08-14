@@ -59,6 +59,7 @@ python bot.py
 #### Автоматическое управление через systemd
 
 1. Установите переменные окружения:
+
 ```bash
 export TELEGRAM_BOT_TOKEN="ваш_токен_бота"
 export OPENAI_API_KEY="ваш_openai_ключ"
@@ -66,11 +67,13 @@ export BOT_USERNAME="имя_вашего_бота"
 ```
 
 2. Запустите скрипт установки:
+
 ```bash
 sudo ./install-service.sh
 ```
 
 3. Управление сервисом:
+
 ```bash
 sudo systemctl status not-your-mama-bot    # Статус
 sudo systemctl restart not-your-mama-bot   # Перезапуск
@@ -81,6 +84,7 @@ sudo journalctl -u not-your-mama-bot -f    # Логи
 #### Обновление бота
 
 **Автоматическое обновление:**
+
 ```bash
 cd /opt/not-your-mama-bot
 ./update.sh
@@ -88,6 +92,12 @@ cd /opt/not-your-mama-bot
 
 **Обновление через Telegram:**
 Отправьте команду `/update` боту в личных сообщениях (требуются права администратора).
+
+**Автоматические обновления:**
+```bash
+sudo ./setup-auto-update.sh
+```
+Выберите частоту обновлений: каждый час, каждые 6 часов, ежедневно или еженедельно.
 
 ## Переменные окружения
 
