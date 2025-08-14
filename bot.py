@@ -81,6 +81,45 @@ async def cmd_style(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("pong")
 
+async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Команда для обновления бота (только для администраторов)"""
+    # Проверяем, что это личное сообщение от администратора
+    if update.effective_chat.type != "private":
+        return await update.message.reply_text("❌ Обновление доступно только в личных сообщениях")
+    
+    # Здесь можно добавить проверку на администратора по user_id
+    # ADMIN_IDS = [123456789, 987654321]  # ID администраторов
+    # if update.effective_user.id not in ADMIN_IDS:
+    #     return await update.message.reply_text("❌ У вас нет прав для обновления бота")
+    
+    await update.message.reply_text("🔄 Начинаю обновление бота...")
+    
+    try:
+        import subprocess
+        import asyncio
+        
+        # Запускаем скрипт обновления
+        process = await asyncio.create_subprocess_exec(
+            './update.sh',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode == 0:
+            result = stdout.decode('utf-8', errors='ignore')
+            # Обрезаем длинный вывод
+            if len(result) > 3000:
+                result = result[:3000] + "\n... (вывод обрезан)"
+            await update.message.reply_text(f"✅ Обновление завершено успешно!\n\n{result}")
+        else:
+            error = stderr.decode('utf-8', errors='ignore')
+            await update.message.reply_text(f"❌ Ошибка при обновлении:\n{error}")
+            
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка при запуске обновления: {str(e)}")
+
 # ─── ОСНОВНОЙ ХЭНДЛЕР ───────────────────────────────────────────────
 async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     msg        = update.message
@@ -156,6 +195,7 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("style", cmd_style))
     app.add_handler(CommandHandler("ping",  cmd_ping))
+    app.add_handler(CommandHandler("update", cmd_update))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     log.info("Bot is up as @%s", BOT_USERNAME)
     app.run_polling()

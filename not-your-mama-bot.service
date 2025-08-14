@@ -1,0 +1,29 @@
+[Unit]
+Description=Not Your Mama Telegram Bot
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/opt/not-your-mama-bot
+Environment=TELEGRAM_BOT_TOKEN=%i
+Environment=OPENAI_API_KEY=%i
+Environment=BOT_USERNAME=%i
+ExecStart=/opt/not-your-mama-bot/venv/bin/python /opt/not-your-mama-bot/bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=not-your-mama-bot
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/not-your-mama-bot/logs
+
+[Install]
+WantedBy=multi-user.target
