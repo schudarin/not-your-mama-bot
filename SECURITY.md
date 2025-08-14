@@ -3,6 +3,7 @@
 ## Команда обновления через Telegram
 
 ### Текущая реализация
+
 Команда `/update` доступна всем пользователям в личных сообщениях. Это **небезопасно** для продакшена.
 
 ### Рекомендуемые меры безопасности
@@ -27,6 +28,7 @@ if update.effective_user.id not in ADMIN_IDS:
 
 1. Отправьте боту команду `/start`
 2. Добавьте в `bot.py` временный код для логирования ID:
+
 ```python
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -45,21 +47,25 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 #### 4. Альтернативные способы обновления
 
 **Рекомендуется использовать только:**
+
 - `./update.sh` - ручное обновление на сервере
 - Автоматические обновления через cron
 - CI/CD pipeline (GitHub Actions, GitLab CI)
 
 **Не рекомендуется:**
+
 - Команда `/update` в Telegram (если не настроена проверка администраторов)
 
 ## Безопасность systemd сервиса
 
 ### Текущие меры безопасности
+
 - Запуск от непривилегированного пользователя `botuser`
 - Ограниченные права доступа к файловой системе
 - Изолированное окружение
 
 ### Дополнительные рекомендации
+
 - Регулярно обновляйте зависимости
 - Мониторьте логи на подозрительную активность
 - Используйте SELinux или AppArmor
@@ -68,6 +74,7 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 ## Мониторинг и логирование
 
 ### Логи systemd
+
 ```bash
 # Просмотр логов в реальном времени
 sudo journalctl -u not-your-mama-bot -f
@@ -77,6 +84,7 @@ sudo journalctl -u not-your-mama-bot --since "1 hour ago"
 ```
 
 ### Логи обновлений
+
 ```bash
 # Логи автоматических обновлений
 tail -f /opt/not-your-mama-bot/logs/update.log
@@ -85,6 +93,7 @@ tail -f /opt/not-your-mama-bot/logs/update.log
 ## Обновление зависимостей
 
 Регулярно проверяйте уязвимости:
+
 ```bash
 # Обновление pip
 pip install --upgrade pip
@@ -100,6 +109,7 @@ pip install --upgrade -r requirements.txt
 ## Резервное копирование
 
 ### Автоматическое резервное копирование
+
 ```bash
 # Создайте скрипт backup.sh
 #!/bin/bash
@@ -110,6 +120,7 @@ find $BACKUP_DIR -name "backup_*.tar.gz" -mtime +7 -delete
 ```
 
 ### Добавьте в cron для ежедневного резервного копирования
+
 ```bash
 0 2 * * * /path/to/backup.sh
 ```
