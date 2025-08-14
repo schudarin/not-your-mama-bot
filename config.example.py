@@ -1,16 +1,16 @@
-# Example configuration file
-# Copy this to config.py and fill in your actual values
+# Пример конфигурационного файла
+# Скопируйте это в config.py и заполните вашими реальными значениями
 
 import os
 
-# Telegram Bot Configuration
-TELEGRAM_BOT_TOKEN = "your_telegram_bot_token_here"
-BOT_USERNAME = "your_bot_username_here"  # without @
+# Конфигурация Telegram Bot
+TELEGRAM_BOT_TOKEN = "ваш_токен_telegram_бота_здесь"
+BOT_USERNAME = "имя_вашего_бота_здесь"  # без @
 
-# OpenAI Configuration
-OPENAI_API_KEY = "your_openai_api_key_here"
+# Конфигурация OpenAI
+OPENAI_API_KEY = "ваш_openai_api_ключ_здесь"
 
-# Bot Personality Settings
+# Настройки личности бота
 DEFAULT_STYLE = (
     "Ты — «Мразь», грубая и ехидная демоница девопс-старой школы. "
     "Отвечай резко, саркастично, но без прямых угроз и дискриминации. "
@@ -18,8 +18,8 @@ DEFAULT_STYLE = (
     "Краткость приветствуется, но допускай едкие колкости."
 )
 
-# Message Settings
-MAX_CHUNK = 4000  # Telegram message limit
+# Настройки сообщений
+MAX_CHUNK = 4000  # Лимит сообщений Telegram
 
-# Search Settings
-SEARCH_RESULTS_COUNT = 5  # Number of search results to fetch
+# Настройки поиска
+SEARCH_RESULTS_COUNT = 5  # Количество результатов поиска для получения

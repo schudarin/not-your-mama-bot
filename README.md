@@ -1,98 +1,98 @@
 # Not Your Mama Bot
 
-A sarcastic, rude Telegram bot with a "devops old-school" personality that responds to mentions, performs web searches, and generates AI-powered responses.
+Саркастичный, грубый Telegram бот с личностью "девопс старой школы", который отвечает на упоминания, выполняет веб-поиск и генерирует ответы с помощью ИИ.
 
-## Features
+## Возможности
 
-- **Sarcastic Personality**: Responds with rude, sarcastic comments in the style of an old-school devops engineer
-- **Web Search**: Performs internet searches using DuckDuckGo when triggered by keywords like "гугли", "найди", "поиск"
-- **Customizable Style**: Change the bot's personality per chat using `/style` command
-- **Smart Triggers**: Responds to mentions, "мразь" keyword, or direct replies
-- **AI-Powered**: Uses OpenAI GPT-4o-mini for intelligent responses and search summaries
+- **Саркастичная личность**: Отвечает грубыми, саркастичными комментариями в стиле девопс-инженера старой школы
+- **Веб-поиск**: Выполняет поиск в интернете через DuckDuckGo при использовании ключевых слов типа "гугли", "найди", "поиск"
+- **Настраиваемый стиль**: Изменяйте личность бота для каждого чата с помощью команды `/style`
+- **Умные триггеры**: Отвечает на упоминания, ключевое слово "мразь" или прямые ответы
+- **ИИ-функции**: Использует OpenAI GPT-4o-mini для умных ответов и сводок поиска
 
-## Commands
+## Команды
 
-- `/start` - Get bot information and usage instructions
-- `/style <text>` - Change bot's personality for the current chat
-- `/ping` - Simple ping command for testing
+- `/start` - Получить информацию о боте и инструкции по использованию
+- `/style <текст>` - Изменить личность бота для текущего чата
+- `/ping` - Простая команда пинг для тестирования
 
-## Setup
+## Установка
 
-### Prerequisites
+### Требования
 
 - Python 3.8+
-- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
+- Telegram Bot Token (от [@BotFather](https://t.me/botfather))
 - OpenAI API Key
 
-### Installation
+### Установка
 
-1. Clone the repository:
+1. Клонируйте репозиторий:
 ```bash
-git clone <repository-url>
+git clone <url-репозитория>
 cd not-your-mama-bot
 ```
 
-2. Install dependencies:
+2. Установите зависимости:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set environment variables:
+3. Установите переменные окружения:
 ```bash
-export TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
-export OPENAI_API_KEY="your_openai_api_key"
-export BOT_USERNAME="your_bot_username"
+export TELEGRAM_BOT_TOKEN="ваш_токен_бота"
+export OPENAI_API_KEY="ваш_openai_ключ"
+export BOT_USERNAME="имя_вашего_бота"
 ```
 
-4. Run the bot:
+4. Запустите бота:
 ```bash
 python bot.py
 ```
 
-## Environment Variables
+## Переменные окружения
 
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token from BotFather
-- `OPENAI_API_KEY` - Your OpenAI API key
-- `BOT_USERNAME` - Your bot's username (without @)
+- `TELEGRAM_BOT_TOKEN` - Ваш токен Telegram бота от BotFather
+- `OPENAI_API_KEY` - Ваш ключ OpenAI API
+- `BOT_USERNAME` - Имя пользователя вашего бота (без @)
 
-## Usage
+## Использование
 
-### In Groups
-- Mention the bot with `@username`
-- Use the word "мразь" in your message
-- Reply to the bot's messages
+### В группах
+- Упоминайте бота через `@имя_пользователя`
+- Используйте слово "мразь" в сообщении
+- Отвечайте на сообщения бота
 
-### Web Search
-Trigger web search by using keywords like:
-- "гугли [query]"
-- "найди [query]"
-- "поиск [query]"
-- "в интернете [query]"
+### Веб-поиск
+Запустите веб-поиск, используя ключевые слова:
+- "гугли [запрос]"
+- "найди [запрос]"
+- "поиск [запрос]"
+- "в интернете [запрос]"
 
-### Customizing Personality
-Use `/style` command to change the bot's personality for the current chat:
+### Настройка личности
+Используйте команду `/style` для изменения личности бота в текущем чате:
 ```
 /style Ты — вежливый и дружелюбный помощник
 ```
 
-## Technical Details
+## Технические детали
 
-- **Framework**: python-telegram-bot
-- **Search Engine**: DuckDuckGo
-- **AI Model**: OpenAI GPT-4o-mini
-- **Message Limit**: 4000 characters per message (Telegram limit)
+- **Фреймворк**: python-telegram-bot
+- **Поисковая система**: DuckDuckGo
+- **ИИ-модель**: OpenAI GPT-4o-mini
+- **Лимит сообщений**: 4000 символов на сообщение (лимит Telegram)
 
-## License
+## Лицензия
 
-This project is open source. Feel free to modify and distribute.
+Этот проект с открытым исходным кодом. Свободно модифицируйте и распространяйте.
 
-## Contributing
+## Участие в разработке
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+1. Форкните репозиторий
+2. Создайте ветку для функции
+3. Внесите изменения
+4. Отправьте pull request
 
-## Disclaimer
+## Отказ от ответственности
 
-This bot is designed to be sarcastic and rude for entertainment purposes. Use responsibly and ensure it complies with Telegram's terms of service and your local regulations.
+Этот бот предназначен для развлечения и имеет саркастичный и грубый характер. Используйте ответственно и убедитесь, что он соответствует условиям использования Telegram и местным нормам.

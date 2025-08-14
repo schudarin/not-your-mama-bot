@@ -1,72 +1,72 @@
 #!/bin/bash
 
-# Not Your Mama Bot Deployment Script
+# Скрипт развертывания Not Your Mama Bot
 set -e
 
-echo "🤖 Not Your Mama Bot - Deployment Script"
-echo "========================================"
+echo "🤖 Not Your Mama Bot - Скрипт развертывания"
+echo "=========================================="
 
-# Check if Python is installed
+# Проверяем, установлен ли Python
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 is not installed. Please install Python 3.8+ first."
+    echo "❌ Python 3 не установлен. Пожалуйста, установите Python 3.8+ сначала."
     exit 1
 fi
 
-# Check if pip is installed
+# Проверяем, установлен ли pip
 if ! command -v pip3 &> /dev/null; then
-    echo "❌ pip3 is not installed. Please install pip first."
+    echo "❌ pip3 не установлен. Пожалуйста, установите pip сначала."
     exit 1
 fi
 
-echo "✅ Python and pip found"
+echo "✅ Python и pip найдены"
 
-# Create virtual environment if it doesn't exist
+# Создаем виртуальное окружение, если оно не существует
 if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
+    echo "📦 Создание виртуального окружения..."
     python3 -m venv venv
 fi
 
-# Activate virtual environment
-echo "🔧 Activating virtual environment..."
+# Активируем виртуальное окружение
+echo "🔧 Активация виртуального окружения..."
 source venv/bin/activate
 
-# Install dependencies
-echo "📚 Installing dependencies..."
+# Устанавливаем зависимости
+echo "📚 Установка зависимостей..."
 pip install -r requirements.txt
 
-# Check environment variables
-echo "🔍 Checking environment variables..."
+# Проверяем переменные окружения
+echo "🔍 Проверка переменных окружения..."
 if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "⚠️  TELEGRAM_BOT_TOKEN not set. Please set it:"
-    echo "   export TELEGRAM_BOT_TOKEN='your_token_here'"
+    echo "⚠️  TELEGRAM_BOT_TOKEN не установлен. Установите его:"
+    echo "   export TELEGRAM_BOT_TOKEN='ваш_токен_здесь'"
 fi
 
 if [ -z "$OPENAI_API_KEY" ]; then
-    echo "⚠️  OPENAI_API_KEY not set. Please set it:"
-    echo "   export OPENAI_API_KEY='your_key_here'"
+    echo "⚠️  OPENAI_API_KEY не установлен. Установите его:"
+    echo "   export OPENAI_API_KEY='ваш_ключ_здесь'"
 fi
 
 if [ -z "$BOT_USERNAME" ]; then
-    echo "⚠️  BOT_USERNAME not set. Please set it:"
-    echo "   export BOT_USERNAME='your_bot_username'"
+    echo "⚠️  BOT_USERNAME не установлен. Установите его:"
+    echo "   export BOT_USERNAME='имя_вашего_бота'"
 fi
 
-# Check if all required env vars are set
+# Проверяем, установлены ли все необходимые переменные окружения
 if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$OPENAI_API_KEY" ] || [ -z "$BOT_USERNAME" ]; then
     echo ""
-    echo "❌ Missing required environment variables."
-    echo "Please set all required variables and run this script again."
+    echo "❌ Отсутствуют необходимые переменные окружения."
+    echo "Пожалуйста, установите все необходимые переменные и запустите скрипт снова."
     echo ""
-    echo "You can also copy env.example to .env and edit it:"
+    echo "Вы также можете скопировать env.example в .env и отредактировать его:"
     echo "   cp env.example .env"
-    echo "   # Edit .env with your values"
+    echo "   # Отредактируйте .env с вашими значениями"
     echo "   source .env"
     exit 1
 fi
 
-echo "✅ All environment variables are set"
+echo "✅ Все переменные окружения установлены"
 
-# Run the bot
-echo "🚀 Starting the bot..."
-echo "Press Ctrl+C to stop"
+# Запускаем бота
+echo "🚀 Запуск бота..."
+echo "Нажмите Ctrl+C для остановки"
 python bot.py

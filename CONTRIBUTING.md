@@ -1,70 +1,70 @@
-# Contributing to Not Your Mama Bot
+# Участие в разработке Not Your Mama Bot
 
-Thank you for your interest in contributing to this project! This document provides guidelines for contributing.
+Спасибо за интерес к участию в разработке этого проекта! Этот документ содержит руководящие принципы для участников.
 
-## Code of Conduct
+## Кодекс поведения
 
-This project is intended for entertainment purposes. Please be respectful and ensure all contributions comply with:
-- Telegram's Terms of Service
-- OpenAI's Usage Policies
-- Local laws and regulations
+Этот проект предназначен для развлечения. Пожалуйста, будьте уважительны и убедитесь, что все вклады соответствуют:
+- Условиям использования Telegram
+- Политикам использования OpenAI
+- Местным законам и нормам
 
-## How to Contribute
+## Как участвовать
 
-### Reporting Issues
+### Сообщение об ошибках
 
-1. Check if the issue has already been reported
-2. Use the issue template if available
-3. Provide clear steps to reproduce the issue
-4. Include relevant logs and error messages
+1. Проверьте, не была ли ошибка уже зарегистрирована
+2. Используйте шаблон проблемы, если он доступен
+3. Предоставьте четкие шаги для воспроизведения ошибки
+4. Включите соответствующие логи и сообщения об ошибках
 
-### Suggesting Features
+### Предложение функций
 
-1. Check if the feature has already been suggested
-2. Describe the feature clearly
-3. Explain why this feature would be useful
-4. Consider implementation complexity
+1. Проверьте, не было ли уже предложено эту функцию
+2. Опишите функцию четко
+3. Объясните, почему эта функция была бы полезной
+4. Учитывайте сложность реализации
 
-### Code Contributions
+### Вклад в код
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Add tests if applicable
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
+1. Форкните репозиторий
+2. Создайте ветку для функции: `git checkout -b feature/amazing-feature`
+3. Внесите изменения
+4. Добавьте тесты, если применимо
+5. Зафиксируйте изменения: `git commit -m 'Add amazing feature'`
+6. Отправьте в ветку: `git push origin feature/amazing-feature`
+7. Откройте Pull Request
 
-## Development Setup
+## Настройка разработки
 
-1. Clone your fork: `git clone https://github.com/yourusername/not-your-mama-bot.git`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Set up environment variables (see README.md)
-4. Run the bot: `python bot.py`
+1. Клонируйте ваш форк: `git clone https://github.com/yourusername/not-your-mama-bot.git`
+2. Установите зависимости: `pip install -r requirements.txt`
+3. Настройте переменные окружения (см. README.md)
+4. Запустите бота: `python bot.py`
 
-## Code Style
+## Стиль кода
 
-- Follow PEP 8 for Python code
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Keep functions small and focused
-- Use type hints where appropriate
+- Следуйте PEP 8 для Python кода
+- Используйте осмысленные имена переменных и функций
+- Добавляйте комментарии для сложной логики
+- Держите функции маленькими и сфокусированными
+- Используйте типизацию где это уместно
 
-## Testing
+## Тестирование
 
-- Test your changes thoroughly
-- Ensure the bot responds correctly to various inputs
-- Test web search functionality
-- Verify error handling works properly
+- Тщательно тестируйте ваши изменения
+- Убедитесь, что бот правильно отвечает на различные входные данные
+- Тестируйте функциональность веб-поиска
+- Проверьте, что обработка ошибок работает правильно
 
-## Pull Request Guidelines
+## Руководящие принципы для Pull Request
 
-1. Provide a clear description of changes
-2. Include any relevant issue numbers
-3. Ensure all tests pass
-4. Update documentation if needed
-5. Follow the existing code style
+1. Предоставьте четкое описание изменений
+2. Включите соответствующие номера проблем
+3. Убедитесь, что все тесты проходят
+4. Обновите документацию при необходимости
+5. Следуйте существующему стилю кода
 
-## Questions?
+## Вопросы?
 
-If you have questions about contributing, feel free to open an issue or reach out to the maintainers.
+Если у вас есть вопросы об участии в разработке, не стесняйтесь открывать проблему или обращаться к сопровождающим.
