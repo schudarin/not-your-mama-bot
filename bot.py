@@ -25,7 +25,7 @@ from telegram.ext import (
     ApplicationBuilder, MessageHandler, CommandHandler,
     ContextTypes, filters
 )
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from openai import AsyncOpenAI
 import requests
 
@@ -96,11 +96,62 @@ def chunk_text(s: str, n: int = MAX_CHUNK):
     return (s[i:i+n] for i in range(0, len(s), n))
 
 def web_search(query: str, num: int = 5) -> Optional[str]:
-    """Полностью переписанная функция поиска через DuckDuckGo"""
+    """Улучшенная функция поиска через DuckDuckGo с обработкой ошибок"""
+    import time
+    
+    # Проверяем версию библиотеки
     try:
-        with DDGS() as ddgs:
-            # Используем обычный поиск вместо news для более широких результатов
-            results = list(ddgs.text(query, max_results=num))
+        import ddgs
+        log.info(f"DDGS version: {ddgs.__version__}")
+    except:
+        log.warning("Could not get DDGS version")
+    
+    try:
+        log.info(f"Starting search for query: '{query}'")
+        
+        # Добавляем небольшую задержку перед запросом
+        time.sleep(0.5)
+        
+        # Создаем DDGS объект с дополнительными параметрами
+        try:
+            ddgs = DDGS()
+        except Exception as e:
+            log.warning(f"Failed to create DDGS with default settings: {e}")
+            # Пробуем с пользовательскими заголовками
+            ddgs = DDGS(headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            })
+        
+        try:
+            # Пробуем разные методы поиска
+            results = None
+            
+            # Метод 1: Обычный текстовый поиск
+            try:
+                log.info(f"Trying text search for: '{query}'")
+                results = list(ddgs.text(query, max_results=num))
+                log.info(f"Text search successful for query: {query}")
+            except Exception as e:
+                log.warning(f"Text search failed for '{query}': {e}")
+                
+                # Метод 2: Поиск новостей (если текстовый не сработал)
+                try:
+                    time.sleep(1)  # Задержка между попытками
+                    log.info(f"Trying news search for: '{query}'")
+                    results = list(ddgs.news(query, max_results=num))
+                    log.info(f"News search successful for query: {query}")
+                except Exception as e2:
+                    log.warning(f"News search also failed for '{query}': {e2}")
+                    
+                    # Метод 3: Поиск с другими параметрами
+                    try:
+                        time.sleep(1)
+                        log.info(f"Trying lite search for: '{query}'")
+                        results = list(ddgs.text(query, max_results=num, backend="lite"))
+                        log.info(f"Lite search successful for query: {query}")
+                    except Exception as e3:
+                        log.error(f"All search methods failed for '{query}': {e3}")
+                        return None
             
             if not results:
                 log.warning(f"No search results for query: {query}")
@@ -121,6 +172,13 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
                 lines.append(f"{i}. **{title}**\n   {snippet}\n   {link}\n")
             
             return "\n".join(lines)
+            
+        finally:
+            # Закрываем DDGS объект
+            try:
+                ddgs.close()
+            except:
+                pass
             
     except Exception as e:
         log.error(f"Search error for query '{query}': {e}")

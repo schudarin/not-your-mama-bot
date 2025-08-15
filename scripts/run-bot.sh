@@ -117,8 +117,8 @@ if ! python -c "import telegram" &> /dev/null; then
     exit 1
 fi
 
-if ! python -c "import duckduckgo_search" &> /dev/null; then
-    print_error "Модуль duckduckgo-search не найден"
+if ! python -c "import ddgs" &> /dev/null; then
+    print_error "Модуль ddgs не найден"
     print_info "Запустите установщик: ./scripts/install.sh"
     exit 1
 fi
