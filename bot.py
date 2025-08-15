@@ -2,6 +2,7 @@
 import os
 import re
 import logging
+import json
 from typing import Optional
 
 # Загружаем переменные окружения из .env файла
@@ -53,6 +54,38 @@ DEFAULT_STYLE = (
 ADMIN_IDS = set()  # Множество ID администраторов
 SUPER_ADMIN_ID = None  # ID супер-администратора (первый пользователь)
 
+# Файл для сохранения администраторов
+ADMINS_FILE = "admins.json"
+
+def load_admins():
+    """Загружает список администраторов из файла"""
+    global ADMIN_IDS, SUPER_ADMIN_ID
+    try:
+        if os.path.exists(ADMINS_FILE):
+            with open(ADMINS_FILE, 'r') as f:
+                data = json.load(f)
+                ADMIN_IDS = set(data.get('admin_ids', []))
+                SUPER_ADMIN_ID = data.get('super_admin_id')
+                log.info(f"Загружено {len(ADMIN_IDS)} администраторов")
+    except Exception as e:
+        log.warning(f"Ошибка загрузки администраторов: {e}")
+
+def save_admins():
+    """Сохраняет список администраторов в файл"""
+    try:
+        data = {
+            'admin_ids': list(ADMIN_IDS),
+            'super_admin_id': SUPER_ADMIN_ID
+        }
+        with open(ADMINS_FILE, 'w') as f:
+            json.dump(data, f)
+        log.info(f"Сохранено {len(ADMIN_IDS)} администраторов")
+    except Exception as e:
+        log.warning(f"Ошибка сохранения администраторов: {e}")
+
+# Загружаем администраторов при запуске
+load_admins()
+
 STYLES = {}  # chat_id -> system prompt (живёт в памяти; после рестарта пусто)
 
 MAX_CHUNK = 4000  # предел для сообщений телеги (~4096)
@@ -93,6 +126,7 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if SUPER_ADMIN_ID is None:
         SUPER_ADMIN_ID = user_id
         ADMIN_IDS.add(user_id)
+        save_admins()  # Сохраняем в файл
         log.info(f"Назначен супер-администратор: {username} (ID: {user_id})")
     
     # Логируем всех пользователей для отладки
@@ -210,6 +244,7 @@ async def cmd_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 return
             
             ADMIN_IDS.add(new_admin_id)
+            save_admins()  # Сохраняем изменения
             await update.message.reply_text(f"✅ Администратор {new_admin_id} добавлен")
             
         except ValueError:
@@ -233,6 +268,7 @@ async def cmd_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 return
             
             ADMIN_IDS.remove(remove_admin_id)
+            save_admins()  # Сохраняем изменения
             await update.message.reply_text(f"✅ Администратор {remove_admin_id} удален")
             
         except ValueError:

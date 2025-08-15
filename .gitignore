@@ -162,6 +162,9 @@ logs/errors/*
 logs/updates/*
 !logs/.gitkeep
 
+# Данные администраторов
+admins.json
+
 # Environment files
 .env
 .env.local
