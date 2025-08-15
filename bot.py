@@ -305,22 +305,24 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         # Определяем тип установки
         current_dir = os.getcwd()
         opt_exists = os.path.exists("/opt/not-your-mama-bot/bot.py")
-        local_exists = os.path.exists("scripts/update.sh")
         
-        log.info(f"Отладка обновления: current_dir={current_dir}, opt_exists={opt_exists}, local_exists={local_exists}")
+        log.info(f"Отладка обновления: current_dir={current_dir}, opt_exists={opt_exists}")
         
+        # Всегда используем systemd установку если она существует
         if opt_exists:
             # Systemd установка
             update_script = "/opt/not-your-mama-bot/scripts/update.sh"
             working_dir = "/opt/not-your-mama-bot"
-            log.info(f"Выбрана systemd установка: {update_script}")
-        elif local_exists:
+            log.info(f"Используем systemd установку: {update_script}")
+        else:
             # Локальная установка
             update_script = "./scripts/update.sh"
             working_dir = current_dir
-            log.info(f"Выбрана локальная установка: {update_script}")
-        else:
-            error_msg = f"❌ Скрипт обновления не найден. current_dir={current_dir}, opt_exists={opt_exists}, local_exists={local_exists}"
+            log.info(f"Используем локальную установку: {update_script}")
+        
+        # Проверяем что скрипт существует
+        if not os.path.exists(update_script):
+            error_msg = f"❌ Скрипт обновления не найден: {update_script}"
             log.error(error_msg)
             await update.message.reply_text(error_msg)
             return
@@ -358,7 +360,7 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     # 1) ТРИГГЕР ПОИСКА (ставим раньше обычного ответа)
     # ловим «интернет/сеть/поиск/гугл/гугли/гуглить/найди…»
-    if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|найд)", text_lower):
+    if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", text_lower):
         query = text  # можно усложнить парсер, но для начала берём весь текст
         results_md = web_search_ddg(query)
         if not results_md:
