@@ -30,14 +30,32 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# Определяем где находится бот
+get_bot_dir() {
+    if [ -f "/opt/not-your-mama-bot/bot.py" ]; then
+        echo "/opt/not-your-mama-bot"
+    elif [ -f "bot.py" ]; then
+        echo "$(pwd)"
+    else
+        echo ""
+    fi
+}
+
 # Загрузка переменных окружения
 load_env() {
-    if [ -f ".env" ]; then
-        print_info "Загрузка переменных из .env файла..."
-        export $(cat .env | grep -v '^#' | xargs)
+    BOT_DIR=$(get_bot_dir)
+    if [ -z "$BOT_DIR" ]; then
+        print_error "Бот не найден!"
+        print_info "Убедитесь что вы в правильной директории или бот установлен"
+        exit 1
+    fi
+    
+    if [ -f "$BOT_DIR/.env" ]; then
+        print_info "Загрузка переменных из $BOT_DIR/.env файла..."
+        export $(cat "$BOT_DIR/.env" | grep -v '^#' | xargs)
         print_success "Переменные окружения загружены"
     else
-        print_warning ".env файл не найден"
+        print_warning ".env файл не найден в $BOT_DIR"
     fi
 }
 
@@ -76,6 +94,12 @@ check_env() {
 check_dependencies() {
     print_info "Проверка зависимостей..."
     
+    BOT_DIR=$(get_bot_dir)
+    if [ -z "$BOT_DIR" ]; then
+        print_error "Бот не найден!"
+        return 1
+    fi
+    
     # Проверяем Python
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 не найден"
@@ -89,13 +113,13 @@ check_dependencies() {
     fi
     
     # Проверяем виртуальное окружение
-    if [ ! -d "venv" ]; then
-        print_warning "Виртуальное окружение не найдено. Создаем..."
-        python3 -m venv venv
+    if [ ! -d "$BOT_DIR/venv" ]; then
+        print_warning "Виртуальное окружение не найдено в $BOT_DIR"
+        return 1
     fi
     
     # Активируем виртуальное окружение
-    source venv/bin/activate
+    source "$BOT_DIR/venv/bin/activate"
     
     # Загружаем переменные окружения для тестов
     load_env

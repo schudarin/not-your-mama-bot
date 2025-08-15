@@ -97,16 +97,41 @@ show_errors() {
     fi
 }
 
+# Определяем где находится бот
+get_bot_dir() {
+    if [ -f "/opt/not-your-mama-bot/bot.py" ]; then
+        echo "/opt/not-your-mama-bot"
+    elif [ -f "bot.py" ]; then
+        echo "$(pwd)"
+    else
+        echo ""
+    fi
+}
+
 # Проверка статуса сервиса
 check_service() {
-    print_info "Проверка статуса systemd сервиса..."
+    BOT_DIR=$(get_bot_dir)
     
-    if systemctl is-active --quiet not-your-mama-bot; then
-        print_success "Сервис активен"
-        systemctl status not-your-mama-bot --no-pager -l
+    if [ "$BOT_DIR" = "/opt/not-your-mama-bot" ]; then
+        print_info "Проверка статуса systemd сервиса..."
+        
+        if systemctl is-active --quiet not-your-mama-bot; then
+            print_success "Сервис активен"
+            systemctl status not-your-mama-bot --no-pager -l
+        else
+            print_error "Сервис неактивен"
+            systemctl status not-your-mama-bot --no-pager -l
+        fi
     else
-        print_error "Сервис неактивен"
-        systemctl status not-your-mama-bot --no-pager -l
+        print_info "Локальная установка - проверка процесса..."
+        
+        if pgrep -f "python.*bot.py" > /dev/null; then
+            print_success "Бот запущен"
+            ps aux | grep "python.*bot.py" | grep -v grep
+        else
+            print_warning "Бот не запущен"
+            print_info "Запустите бота: ./scripts/run-bot.sh"
+        fi
     fi
 }
 
@@ -114,13 +139,19 @@ check_service() {
 check_env() {
     print_info "Проверка переменных окружения..."
     
-    if [ -f ".env" ]; then
-        print_success "Файл .env найден"
+    BOT_DIR=$(get_bot_dir)
+    if [ -z "$BOT_DIR" ]; then
+        print_error "Бот не найден!"
+        return 1
+    fi
+    
+    if [ -f "$BOT_DIR/.env" ]; then
+        print_success "Файл .env найден в $BOT_DIR"
         echo ""
         echo "Содержимое .env:"
-        cat .env | sed 's/=.*/=***/'  # Скрываем значения
+        cat "$BOT_DIR/.env" | sed 's/=.*/=***/'  # Скрываем значения
     else
-        print_warning "Файл .env не найден"
+        print_warning "Файл .env не найден в $BOT_DIR"
     fi
     
     echo ""
@@ -134,15 +165,21 @@ check_env() {
 check_deps() {
     print_info "Проверка зависимостей..."
     
-    if [ -d "venv" ]; then
-        print_success "Виртуальное окружение найдено"
-        source venv/bin/activate
+    BOT_DIR=$(get_bot_dir)
+    if [ -z "$BOT_DIR" ]; then
+        print_error "Бот не найден!"
+        return 1
+    fi
+    
+    if [ -d "$BOT_DIR/venv" ]; then
+        print_success "Виртуальное окружение найдено в $BOT_DIR"
+        source "$BOT_DIR/venv/bin/activate"
         
         echo ""
         echo "Установленные пакеты:"
         pip list | grep -E "(telegram|openai|duckduckgo)"
     else
-        print_warning "Виртуальное окружение не найдено"
+        print_warning "Виртуальное окружение не найдено в $BOT_DIR"
     fi
 }
 
