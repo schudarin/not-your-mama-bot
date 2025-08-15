@@ -96,6 +96,14 @@ check_sudo() {
     return 0
 }
 
+# Очистка частично созданного виртуального окружения
+cleanup_venv() {
+    if [ -d "venv" ] && [ ! -f "venv/bin/activate" ]; then
+        print_info "Удаление поврежденного виртуального окружения..."
+        rm -rf venv
+    fi
+}
+
 # Проверка python3-venv
 check_venv() {
     if ! python3 -c "import venv" &> /dev/null; then
@@ -241,6 +249,9 @@ get_bot_config() {
 install_local() {
     print_info "Установка для локальной разработки..."
     
+    # Очищаем поврежденное виртуальное окружение
+    cleanup_venv
+    
     # Проверяем и устанавливаем python3-venv если нужно
     if ! python3 -c "import venv" &> /dev/null; then
         print_info "Устанавливаем python3-venv..."
@@ -285,13 +296,13 @@ install_local() {
             
             # Пробуем с virtualenv если доступен
             if command -v virtualenv &> /dev/null; then
+                print_info "Создаем виртуальное окружение через virtualenv..."
                 if virtualenv venv; then
                     print_success "Виртуальное окружение создано через virtualenv"
                 else
-                    print_error "Не удалось создать виртуальное окружение"
+                    print_error "Не удалось создать виртуальное окружение через virtualenv"
                     print_info "Установите python3-venv вручную:"
                     echo "  sudo apt-get install python3-venv python3.8-venv"
-                    echo "  или: pip install virtualenv"
                     exit 1
                 fi
             else
@@ -302,9 +313,22 @@ install_local() {
                 exit 1
             fi
         fi
+    else
+        print_info "Виртуальное окружение уже существует"
     fi
     
-    # Активируем виртуальное окружение
+    # Проверяем и активируем виртуальное окружение
+    if [ ! -d "venv" ]; then
+        print_error "Виртуальное окружение не найдено"
+        exit 1
+    fi
+    
+    if [ ! -f "venv/bin/activate" ]; then
+        print_error "Файл активации виртуального окружения не найден"
+        exit 1
+    fi
+    
+    print_info "Активация виртуального окружения..."
     source venv/bin/activate
     
     # Устанавливаем зависимости
@@ -372,14 +396,38 @@ install_systemd() {
     
     # Создаем виртуальное окружение
     cd /opt/not-your-mama-bot
+    print_info "Создание виртуального окружения..."
+    
     if python3 -m venv venv; then
         print_success "Виртуальное окружение создано"
     else
         print_error "Ошибка создания виртуального окружения"
-        print_info "Попробуйте установить python3-venv вручную:"
-        echo "  apt-get install python3-venv python3.8-venv"
+        print_info "Пробуем через virtualenv..."
+        
+        if command -v virtualenv &> /dev/null; then
+            if virtualenv venv; then
+                print_success "Виртуальное окружение создано через virtualenv"
+            else
+                print_error "Не удалось создать виртуальное окружение"
+                print_info "Попробуйте установить python3-venv вручную:"
+                echo "  apt-get install python3-venv python3.8-venv"
+                exit 1
+            fi
+        else
+            print_error "Не удалось создать виртуальное окружение"
+            print_info "Попробуйте установить python3-venv вручную:"
+            echo "  apt-get install python3-venv python3.8-venv"
+            exit 1
+        fi
+    fi
+    
+    # Проверяем и активируем виртуальное окружение
+    if [ ! -f "venv/bin/activate" ]; then
+        print_error "Файл активации виртуального окружения не найден"
         exit 1
     fi
+    
+    print_info "Активация виртуального окружения..."
     source venv/bin/activate
     pip install --upgrade pip
     pip install -r requirements.txt
