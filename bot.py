@@ -210,11 +210,7 @@ async def should_notify_about_updates():
     # Уведомляем только если автообновление не включено
     return UPDATE_AVAILABLE and not is_auto_update_enabled()
 
-async def update_checker():
-    """Фоновая задача для проверки обновлений"""
-    while True:
-        await check_for_updates()
-        await asyncio.sleep(3600)  # Проверяем каждый час
+
 
 # ─── КОМАНДЫ ───────────────────────────────────────────────────────────
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -515,8 +511,12 @@ def main():
     app.add_handler(CommandHandler("version", cmd_version))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     
-    # Запускаем фоновую задачу проверки обновлений
-    asyncio.create_task(update_checker())
+    # Запускаем фоновую задачу проверки обновлений после запуска event loop
+    app.job_queue.run_repeating(
+        lambda context: asyncio.create_task(check_for_updates()),
+        interval=3600,  # каждый час
+        first=10  # первая проверка через 10 секунд
+    )
     
     log.info("Bot is up as @%s", BOT_USERNAME)
     app.run_polling()
