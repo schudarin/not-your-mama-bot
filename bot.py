@@ -524,7 +524,11 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     
     # Запускаем фоновую задачу проверки обновлений
-    asyncio.create_task(update_checker())
+    app.job_queue.run_repeating(
+        lambda context: asyncio.create_task(check_for_updates()),
+        interval=3600,  # каждый час
+        first=10  # первая проверка через 10 секунд
+    )
     
     log.info("Bot is up as @%s", BOT_USERNAME)
     app.run_polling()
