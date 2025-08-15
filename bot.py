@@ -297,112 +297,257 @@ async def cmd_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
 
 async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Команда для обновления бота (только для администраторов)"""
+    """Команда для управления ботом (только для администраторов)"""
     user_id = update.effective_user.id
     
     # Проверяем права администратора
     if user_id not in ADMIN_IDS:
-        return await update.message.reply_text("❌ У вас нет прав для обновления бота")
+        return await update.message.reply_text("❌ У вас нет прав для управления ботом")
     
     # Проверяем, что это личное сообщение
     if update.effective_chat.type != "private":
-        return await update.message.reply_text("❌ Обновление доступно только в личных сообщениях")
+        return await update.message.reply_text("❌ Управление доступно только в личных сообщениях")
     
-    await update.message.reply_text("🔄 Начинаю обновление бота...")
+    # Проверяем аргументы команды
+    args = ctx.args
+    if not args:
+        # Показываем доступные команды
+        await update.message.reply_text(
+            "🔧 Управление ботом:\n\n"
+            "📋 Доступные команды:\n"
+            "• /update status - статус бота и версия\n"
+            "• /update restart - перезапуск службы\n"
+            "• /update info - информация о системе\n"
+            "• /update pull - попытка обновления (если возможно)\n\n"
+            "💡 В read-only среде используйте:\n"
+            "• /update status - для проверки версии\n"
+            "• /update restart - для перезапуска"
+        )
+        return
     
+    action = args[0].lower()
+    
+    if action == "status":
+        await update.message.reply_text("🔄 Проверяю статус бота...")
+        await cmd_update_status(update, ctx)
+    
+    elif action == "restart":
+        await update.message.reply_text("🔄 Перезапускаю службу...")
+        await cmd_update_restart(update, ctx)
+    
+    elif action == "info":
+        await update.message.reply_text("📊 Собираю информацию о системе...")
+        await cmd_update_info(update, ctx)
+    
+    elif action == "pull":
+        await update.message.reply_text("🔄 Пытаюсь обновить бота...")
+        await cmd_update_pull(update, ctx)
+    
+    else:
+        await update.message.reply_text(
+            "❌ Неизвестная команда. Используйте:\n"
+            "• /update status - статус бота\n"
+            "• /update restart - перезапуск службы\n"
+            "• /update info - информация о системе\n"
+            "• /update pull - попытка обновления"
+        )
+
+async def cmd_update_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Проверка статуса бота и версии"""
     try:
         import subprocess
         import asyncio
         import os
         
-        # Определяем тип установки
+        # Определяем директорию бота
         current_dir = os.getcwd()
         opt_exists = os.path.exists("/opt/not-your-mama-bot/bot.py")
         
-        log.info(f"Отладка обновления: current_dir={current_dir}, opt_exists={opt_exists}")
-        
-        # Проверяем права на запись в текущую директорию
-        if not os.access(current_dir, os.W_OK):
-            await update.message.reply_text(
-                "⚠️ Файловая система доступна только для чтения.\n"
-                "Для обновления используйте:\n"
-                "• Ручное обновление через SSH\n"
-                "• Или перезапустите контейнер/сервис"
-            )
-            return
-        
-        # Всегда используем systemd установку если она существует
         if opt_exists:
-            # Systemd установка
-            update_script = "/opt/not-your-mama-bot/scripts/update-readonly.sh"
             working_dir = "/opt/not-your-mama-bot"
-            log.info(f"Используем systemd установку: {update_script}")
         else:
-            # Локальная установка
-            update_script = "./scripts/update-readonly.sh"
             working_dir = current_dir
-            log.info(f"Используем локальную установку: {update_script}")
         
-        # Проверяем что скрипт существует
-        if not os.path.exists(update_script):
-            error_msg = f"❌ Скрипт обновления не найден: {update_script}"
-            log.error(error_msg)
-            await update.message.reply_text(error_msg)
-            return
-        
-        # Проверяем права на выполнение скрипта
-        if not os.access(update_script, os.X_OK):
-            await update.message.reply_text(
-                f"❌ Нет прав на выполнение скрипта обновления: {update_script}\n"
-                "Попробуйте: chmod +x scripts/update.sh"
-            )
-            return
-        
-        # Запускаем скрипт обновления
+        # Проверяем версию git
         process = await asyncio.create_subprocess_exec(
-            update_script,
+            "git", "rev-parse", "--short", "HEAD",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=working_dir
         )
         
         stdout, stderr = await process.communicate()
+        git_version = stdout.decode('utf-8').strip() if process.returncode == 0 else "Неизвестно"
         
-        # Логируем результат для отладки
+        # Проверяем статус службы systemd
+        service_status = "Недоступно"
+        if opt_exists:
+            process = await asyncio.create_subprocess_exec(
+                "systemctl", "is-active", "not-your-mama-bot",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode == 0:
+                service_status = "Активна" if stdout.decode().strip() == "active" else "Неактивна"
+        
+        # Проверяем права на запись
+        write_access = "Доступна" if os.access(working_dir, os.W_OK) else "Только чтение"
+        
+        status_msg = (
+            f"📊 Статус бота:\n\n"
+            f"🆔 Версия: {git_version}\n"
+            f"📁 Директория: {working_dir}\n"
+            f"✍️ Права записи: {write_access}\n"
+            f"🔧 Служба systemd: {service_status}\n"
+            f"🤖 Бот: Работает ✅"
+        )
+        
+        await update.message.reply_text(status_msg)
+        
+    except Exception as e:
+        log.error(f"Status check error: {e}")
+        await update.message.reply_text(f"❌ Ошибка при проверке статуса: {str(e)}")
+
+async def cmd_update_restart(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Перезапуск службы systemd"""
+    try:
+        import subprocess
+        import asyncio
+        import os
+        
+        # Проверяем, есть ли systemd установка
+        if not os.path.exists("/opt/not-your-mama-bot/bot.py"):
+            await update.message.reply_text("❌ Systemd установка не найдена. Перезапуск недоступен.")
+            return
+        
+        # Перезапускаем службу
+        process = await asyncio.create_subprocess_exec(
+            "sudo", "systemctl", "restart", "not-your-mama-bot",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode == 0:
+            await update.message.reply_text("✅ Служба успешно перезапущена!")
+        else:
+            error_msg = stderr.decode('utf-8', errors='ignore')
+            await update.message.reply_text(f"❌ Ошибка при перезапуске:\n{error_msg}")
+        
+    except Exception as e:
+        log.error(f"Restart error: {e}")
+        await update.message.reply_text(f"❌ Ошибка при перезапуске: {str(e)}")
+
+async def cmd_update_info(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Информация о системе"""
+    try:
+        import subprocess
+        import asyncio
+        import os
+        import platform
+        
+        # Системная информация
+        system_info = (
+            f"💻 Система: {platform.system()} {platform.release()}\n"
+            f"🐍 Python: {platform.python_version()}\n"
+            f"📁 Рабочая директория: {os.getcwd()}\n"
+        )
+        
+        # Проверяем доступность systemd
+        process = await asyncio.create_subprocess_exec(
+            "systemctl", "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        systemd_available = "Доступен" if process.returncode == 0 else "Недоступен"
+        
+        # Проверяем права на запись
+        write_access = "Доступна" if os.access(".", os.W_OK) else "Только чтение"
+        
+        # Проверяем наличие git
+        process = await asyncio.create_subprocess_exec(
+            "git", "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        git_version = stdout.decode().strip() if process.returncode == 0 else "Недоступен"
+        
+        info_msg = (
+            f"📊 Информация о системе:\n\n"
+            f"{system_info}"
+            f"🔧 Systemd: {systemd_available}\n"
+            f"📝 Git: {git_version}\n"
+            f"✍️ Права записи: {write_access}\n"
+            f"🤖 Бот: @{BOT_USERNAME}"
+        )
+        
+        await update.message.reply_text(info_msg)
+        
+    except Exception as e:
+        log.error(f"Info error: {e}")
+        await update.message.reply_text(f"❌ Ошибка при получении информации: {str(e)}")
+
+async def cmd_update_pull(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Попытка обновления через git pull"""
+    try:
+        import subprocess
+        import asyncio
+        import os
+        
+        # Определяем директорию бота
+        current_dir = os.getcwd()
+        opt_exists = os.path.exists("/opt/not-your-mama-bot/bot.py")
+        
+        if opt_exists:
+            working_dir = "/opt/not-your-mama-bot"
+        else:
+            working_dir = current_dir
+        
+        # Проверяем права на запись
+        if not os.access(working_dir, os.W_OK):
+            await update.message.reply_text(
+                "❌ Файловая система доступна только для чтения.\n\n"
+                "💡 Для обновления:\n"
+                "• Подключитесь по SSH\n"
+                "• Выполните: cd /opt/not-your-mama-bot && git pull\n"
+                "• Перезапустите: sudo systemctl restart not-your-mama-bot"
+            )
+            return
+        
+        # Выполняем git pull
+        process = await asyncio.create_subprocess_exec(
+            "git", "pull", "origin", "master",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=working_dir
+        )
+        
+        stdout, stderr = await process.communicate()
         stdout_text = stdout.decode('utf-8', errors='ignore')
         stderr_text = stderr.decode('utf-8', errors='ignore')
         
-        log.info(f"Update script return code: {process.returncode}")
-        log.info(f"Update script stdout: {stdout_text}")
-        if stderr_text:
-            log.error(f"Update script stderr: {stderr_text}")
-        
         if process.returncode == 0:
-            # Обрезаем длинный вывод
-            if len(stdout_text) > 3000:
-                stdout_text = stdout_text[:3000] + "\n... (вывод обрезан)"
-            await update.message.reply_text(f"✅ Обновление завершено успешно!\n\n{stdout_text}")
-        else:
-            # Проверяем специфические ошибки
-            if "Read-only file system" in stderr_text or "cannot open .git/FETCH_HEAD" in stderr_text:
-                error_msg = (
-                    "❌ Ошибка: Файловая система доступна только для чтения\n\n"
-                    "🔧 Решения:\n"
-                    "• Перезапустите контейнер/сервис\n"
-                    "• Обновите вручную через SSH\n"
-                    "• Проверьте права доступа к файловой системе"
-                )
+            # Проверяем, были ли обновления
+            if "Already up to date" in stdout_text:
+                await update.message.reply_text("✅ Бот уже обновлен до последней версии!")
             else:
-                error_msg = f"❌ Ошибка при обновлении (код: {process.returncode}):\n"
-                if stderr_text:
-                    error_msg += stderr_text
-                else:
-                    error_msg += stdout_text
+                await update.message.reply_text(f"✅ Обновление завершено!\n\n{stdout_text}")
+                
+                # Перезапускаем службу если это systemd установка
+                if opt_exists:
+                    await update.message.reply_text("🔄 Перезапускаю службу...")
+                    await cmd_update_restart(update, ctx)
+        else:
+            error_msg = f"❌ Ошибка при обновлении:\n{stderr_text or stdout_text}"
             await update.message.reply_text(error_msg)
-            
+        
     except Exception as e:
-        log.error(f"Update error: {e}")
-        await update.message.reply_text(f"❌ Ошибка при запуске обновления: {str(e)}")
+        log.error(f"Pull error: {e}")
+        await update.message.reply_text(f"❌ Ошибка при обновлении: {str(e)}")
 
 # ─── ОСНОВНОЙ ХЭНДЛЕР ───────────────────────────────────────────────
 async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
