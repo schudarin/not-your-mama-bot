@@ -264,11 +264,27 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         import subprocess
         import asyncio
         
+        import os
+        
+        # Определяем тип установки
+        if os.path.exists("/opt/not-your-mama-bot/bot.py"):
+            # Systemd установка
+            update_script = "/opt/not-your-mama-bot/scripts/update.sh"
+            working_dir = "/opt/not-your-mama-bot"
+        elif os.path.exists("scripts/update.sh"):
+            # Локальная установка
+            update_script = "./scripts/update.sh"
+            working_dir = os.getcwd()
+        else:
+            await update.message.reply_text("❌ Скрипт обновления не найден.")
+            return
+        
         # Запускаем скрипт обновления
         process = await asyncio.create_subprocess_exec(
-            './update.sh',
+            update_script,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
+            cwd=working_dir
         )
         
         stdout, stderr = await process.communicate()
