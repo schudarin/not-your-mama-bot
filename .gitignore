@@ -169,3 +169,6 @@ logs/updates/*
 
 # Test files
 test_*.py
+
+# Installer configuration
+.install_config
