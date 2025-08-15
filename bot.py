@@ -9,7 +9,7 @@ from telegram.ext import (
     ApplicationBuilder, MessageHandler, CommandHandler,
     ContextTypes, filters
 )
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 from openai import AsyncOpenAI
 
 # ─── ЛОГИ ───────────────────────────────────────────────────────────
@@ -49,7 +49,8 @@ def chunk_text(s: str, n: int = MAX_CHUNK):
 def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
     """Возвращает Markdown-список результатов DuckDuckGo или None при ошибке/пусто."""
     try:
-        results = ddg(query, max_results=num)
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=num))
     except Exception as e:
         log.warning("DDG error: %s", e)
         return None
