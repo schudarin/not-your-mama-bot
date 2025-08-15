@@ -656,9 +656,26 @@ install_systemd() {
     fi
     
     print_info "Активация виртуального окружения..."
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    if ! source venv/bin/activate; then
+        print_error "Ошибка активации виртуального окружения"
+        exit 1
+    fi
+    print_success "Виртуальное окружение активировано"
+    
+    # Устанавливаем зависимости
+    print_info "Установка Python зависимостей..."
+    print_info "Обновление pip..."
+    if ! pip install --upgrade pip; then
+        print_error "Ошибка обновления pip"
+        exit 1
+    fi
+    
+    print_info "Установка зависимостей из requirements.txt..."
+    if ! pip install -r requirements.txt; then
+        print_error "Ошибка установки зависимостей"
+        exit 1
+    fi
+    print_success "Зависимости установлены успешно"
     
     # Проверяем установку ключевых модулей
     print_info "Проверка установки модулей..."
@@ -681,11 +698,19 @@ install_systemd() {
     fi
     
     # Создаем .env файл
+    print_info "Создание .env файла..."
     cat > .env << EOF
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 OPENAI_API_KEY=$OPENAI_API_KEY
 BOT_USERNAME=$BOT_USERNAME
 EOF
+    
+    # Проверяем что файл создался
+    if [ ! -f ".env" ]; then
+        print_error "Ошибка создания .env файла"
+        exit 1
+    fi
+    print_success ".env файл создан"
     
     chown botuser:botuser .env
     chmod 600 .env
