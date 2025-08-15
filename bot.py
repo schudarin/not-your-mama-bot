@@ -43,9 +43,6 @@ BOT_USERNAME = os.getenv("BOT_USERNAME", "").lstrip("@")
 
 openai = AsyncOpenAI(api_key=OPENAI_KEY)
 
-# Глобальная переменная для application (будет установлена в main())
-application = None
-
 # Персона бота по умолчанию (нейтральная)
 DEFAULT_STYLE = (
     "Ты — полезный и дружелюбный ИИ-ассистент. "
@@ -213,107 +210,12 @@ async def should_notify_about_updates():
     # Уведомляем только если автообновление не включено
     return UPDATE_AVAILABLE and not is_auto_update_enabled()
 
-async def perform_auto_update():
-    """Выполняет автоматическое обновление"""
-    try:
-        import subprocess
-        import asyncio
-        import os
-        
-        # Определяем директорию бота
-        current_dir = os.getcwd()
-        opt_exists = os.path.exists("/opt/not-your-mama-bot/bot.py")
-        
-        if opt_exists:
-            working_dir = "/opt/not-your-mama-bot"
-        else:
-            working_dir = current_dir
-        
-        # Проверяем права на запись
-        if not os.access(working_dir, os.W_OK):
-            log.warning("Нет прав на запись для автообновления")
-            return False, "Нет прав на запись"
-        
-        # Выполняем git pull
-        process = await asyncio.create_subprocess_exec(
-            "git", "pull", "origin", "master",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=working_dir
-        )
-        
-        stdout, stderr = await process.communicate()
-        stdout_text = stdout.decode('utf-8', errors='ignore')
-        stderr_text = stderr.decode('utf-8', errors='ignore')
-        
-        if process.returncode == 0:
-            # Проверяем, были ли обновления
-            if "Already up to date" in stdout_text:
-                return False, "Уже обновлен"
-            else:
-                # Перезапускаем службу если это systemd установка
-                if opt_exists:
-                    restart_process = await asyncio.create_subprocess_exec(
-                        "sudo", "systemctl", "restart", "not-your-mama-bot",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    restart_stdout, restart_stderr = await restart_process.communicate()
-                    
-                    if restart_process.returncode == 0:
-                        return True, "Обновлен и перезапущен"
-                    else:
-                        return True, "Обновлен, но не удалось перезапустить службу"
-                else:
-                    return True, "Обновлен (требуется ручной перезапуск)"
-        else:
-            error_msg = stderr_text or stdout_text
-            log.error(f"Ошибка автообновления: {error_msg}")
-            return False, f"Ошибка: {error_msg}"
-        
-    except Exception as e:
-        log.error(f"Ошибка автообновления: {e}")
-        return False, f"Исключение: {str(e)}"
-
-async def notify_admins_about_update(success: bool, message: str):
-    """Уведомляет всех администраторов об обновлении"""
-    global application
-    
-    if not ADMIN_IDS or not application:
-        return
-    
-    if success:
-        notification = f"✅ Бот успешно обновился!\n📝 {message}"
-    else:
-        notification = f"❌ Ошибка автообновления: {message}"
-    
-    # Отправляем уведомления всем администраторам
-    for admin_id in ADMIN_IDS:
-        try:
-            await application.bot.send_message(
-                chat_id=admin_id,
-                text=notification
-            )
-            log.info(f"Уведомление отправлено администратору {admin_id}")
-        except Exception as e:
-            log.error(f"Ошибка отправки уведомления администратору {admin_id}: {e}")
-
 async def update_checker():
     """Фоновая задача для проверки обновлений"""
     global UPDATE_AVAILABLE
     
     while True:
         await check_for_updates()
-        
-        # Если автообновление включено и есть обновления - обновляемся
-        if UPDATE_AVAILABLE and is_auto_update_enabled():
-            log.info("Выполняем автообновление...")
-            success, message = await perform_auto_update()
-            await notify_admins_about_update(success, message)
-            
-            # Сбрасываем флаг обновления после попытки
-            UPDATE_AVAILABLE = False
-        
         await asyncio.sleep(3600)  # Проверяем каждый час
 
 # ─── КОМАНДЫ ───────────────────────────────────────────────────────────
@@ -505,7 +407,7 @@ async def cmd_version(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if UPDATE_AVAILABLE:
             auto_update_enabled = is_auto_update_enabled()
             if auto_update_enabled:
-                version_msg += f"\n\n🆕 Доступно обновление!\n✅ Автообновление включено - обновится автоматически"
+                version_msg += f"\n\n🆕 Доступно обновление!\n✅ Автообновление включено - обновится через cron"
             else:
                 version_msg += f"\n\n🆕 Доступно обновление!\n❌ Автообновление отключено\n💡 Для обновления перезапустите контейнер/сервис"
         else:
@@ -569,7 +471,7 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await check_for_updates()
         if UPDATE_AVAILABLE:
             if is_auto_update_enabled():
-                await send_reply(msg, "🆕 Доступно обновление! Бот обновится автоматически в соответствии с расписанием.")
+                await send_reply(msg, "🆕 Доступно обновление! Бот обновится автоматически через cron в соответствии с расписанием.")
             else:
                 await send_reply(msg, "🆕 Доступно обновление! Для применения обновления перезапустите контейнер/сервис.")
     
@@ -609,9 +511,7 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ─── ЗАПУСК ─────────────────────────────────────────────────────────
 def main():
-    global application
     app = ApplicationBuilder().token(TG_TOKEN).build()
-    application = app  # Устанавливаем глобальную переменную
     
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("style", cmd_style))
