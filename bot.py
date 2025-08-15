@@ -313,7 +313,6 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         import subprocess
         import asyncio
-        
         import os
         
         # Определяем тип установки
@@ -322,15 +321,25 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         log.info(f"Отладка обновления: current_dir={current_dir}, opt_exists={opt_exists}")
         
+        # Проверяем права на запись в текущую директорию
+        if not os.access(current_dir, os.W_OK):
+            await update.message.reply_text(
+                "⚠️ Файловая система доступна только для чтения.\n"
+                "Для обновления используйте:\n"
+                "• Ручное обновление через SSH\n"
+                "• Или перезапустите контейнер/сервис"
+            )
+            return
+        
         # Всегда используем systemd установку если она существует
         if opt_exists:
             # Systemd установка
-            update_script = "/opt/not-your-mama-bot/scripts/update.sh"
+            update_script = "/opt/not-your-mama-bot/scripts/update-readonly.sh"
             working_dir = "/opt/not-your-mama-bot"
             log.info(f"Используем systemd установку: {update_script}")
         else:
             # Локальная установка
-            update_script = "./scripts/update.sh"
+            update_script = "./scripts/update-readonly.sh"
             working_dir = current_dir
             log.info(f"Используем локальную установку: {update_script}")
         
@@ -339,6 +348,14 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             error_msg = f"❌ Скрипт обновления не найден: {update_script}"
             log.error(error_msg)
             await update.message.reply_text(error_msg)
+            return
+        
+        # Проверяем права на выполнение скрипта
+        if not os.access(update_script, os.X_OK):
+            await update.message.reply_text(
+                f"❌ Нет прав на выполнение скрипта обновления: {update_script}\n"
+                "Попробуйте: chmod +x scripts/update.sh"
+            )
             return
         
         # Запускаем скрипт обновления
@@ -366,14 +383,25 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 stdout_text = stdout_text[:3000] + "\n... (вывод обрезан)"
             await update.message.reply_text(f"✅ Обновление завершено успешно!\n\n{stdout_text}")
         else:
-            error_msg = f"❌ Ошибка при обновлении (код: {process.returncode}):\n"
-            if stderr_text:
-                error_msg += stderr_text
+            # Проверяем специфические ошибки
+            if "Read-only file system" in stderr_text or "cannot open .git/FETCH_HEAD" in stderr_text:
+                error_msg = (
+                    "❌ Ошибка: Файловая система доступна только для чтения\n\n"
+                    "🔧 Решения:\n"
+                    "• Перезапустите контейнер/сервис\n"
+                    "• Обновите вручную через SSH\n"
+                    "• Проверьте права доступа к файловой системе"
+                )
             else:
-                error_msg += stdout_text
+                error_msg = f"❌ Ошибка при обновлении (код: {process.returncode}):\n"
+                if stderr_text:
+                    error_msg += stderr_text
+                else:
+                    error_msg += stdout_text
             await update.message.reply_text(error_msg)
             
     except Exception as e:
+        log.error(f"Update error: {e}")
         await update.message.reply_text(f"❌ Ошибка при запуске обновления: {str(e)}")
 
 # ─── ОСНОВНОЙ ХЭНДЛЕР ───────────────────────────────────────────────
