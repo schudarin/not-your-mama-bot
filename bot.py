@@ -390,15 +390,27 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         stdout, stderr = await process.communicate()
         
+        # Логируем результат для отладки
+        stdout_text = stdout.decode('utf-8', errors='ignore')
+        stderr_text = stderr.decode('utf-8', errors='ignore')
+        
+        log.info(f"Update script return code: {process.returncode}")
+        log.info(f"Update script stdout: {stdout_text}")
+        if stderr_text:
+            log.error(f"Update script stderr: {stderr_text}")
+        
         if process.returncode == 0:
-            result = stdout.decode('utf-8', errors='ignore')
             # Обрезаем длинный вывод
-            if len(result) > 3000:
-                result = result[:3000] + "\n... (вывод обрезан)"
-            await update.message.reply_text(f"✅ Обновление завершено успешно!\n\n{result}")
+            if len(stdout_text) > 3000:
+                stdout_text = stdout_text[:3000] + "\n... (вывод обрезан)"
+            await update.message.reply_text(f"✅ Обновление завершено успешно!\n\n{stdout_text}")
         else:
-            error = stderr.decode('utf-8', errors='ignore')
-            await update.message.reply_text(f"❌ Ошибка при обновлении:\n{error}")
+            error_msg = f"❌ Ошибка при обновлении (код: {process.returncode}):\n"
+            if stderr_text:
+                error_msg += stderr_text
+            else:
+                error_msg += stdout_text
+            await update.message.reply_text(error_msg)
             
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка при запуске обновления: {str(e)}")
