@@ -224,11 +224,12 @@ test_duckduckgo() {
     
     # Создаем временный скрипт для тестирования
     cat > test_ddg.py << 'EOF'
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 
 def test_ddg():
     try:
-        results = ddg("test", max_results=1)
+        with DDGS() as ddgs:
+            results = list(ddgs.text("test", max_results=1))
         if results:
             print(f"✅ DuckDuckGo поиск работает!")
             print(f"   Найден результат: {results[0].get('title', 'Без заголовка')}")
