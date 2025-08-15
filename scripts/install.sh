@@ -383,17 +383,6 @@ get_bot_config() {
         esac
     done
     
-    # Информация о настройке администратора
-    echo ""
-    print_info "Настройка администратора"
-    echo "=========================="
-    echo "После установки бота:"
-    echo "1. Запустите бота командой: python bot.py"
-    echo "2. Отправьте боту /start в личных сообщениях"
-    echo "3. Ваш ID будет автоматически записан как супер-администратор"
-    echo "4. Теперь вы можете управлять ботом через команды /admin, /style, /update"
-    echo ""
-    
     # Сохраняем конфигурацию для возможного повторного использования
     save_config
 }
@@ -511,6 +500,26 @@ install_local() {
     print_info "Установка Python зависимостей..."
     pip install --upgrade pip
     pip install -r requirements.txt
+    
+    # Проверяем установку ключевых модулей
+    print_info "Проверка установки модулей..."
+    if pip show python-telegram-bot &> /dev/null; then
+        print_success "python-telegram-bot установлен"
+    else
+        print_error "python-telegram-bot не установлен"
+    fi
+    
+    if pip show duckduckgo-search &> /dev/null; then
+        print_success "duckduckgo-search установлен"
+    else
+        print_error "duckduckgo-search не установлен"
+    fi
+    
+    if pip show openai &> /dev/null; then
+        print_success "openai установлен"
+    else
+        print_error "openai не установлен"
+    fi
     
     # Создаем .env файл
     cat > .env << EOF
@@ -631,6 +640,26 @@ install_systemd() {
     pip install --upgrade pip
     pip install -r requirements.txt
     
+    # Проверяем установку ключевых модулей
+    print_info "Проверка установки модулей..."
+    if pip show python-telegram-bot &> /dev/null; then
+        print_success "python-telegram-bot установлен"
+    else
+        print_error "python-telegram-bot не установлен"
+    fi
+    
+    if pip show duckduckgo-search &> /dev/null; then
+        print_success "duckduckgo-search установлен"
+    else
+        print_error "duckduckgo-search не установлен"
+    fi
+    
+    if pip show openai &> /dev/null; then
+        print_success "openai установлен"
+    else
+        print_error "openai не установлен"
+    fi
+    
     # Создаем .env файл
     cat > .env << EOF
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
@@ -728,8 +757,11 @@ main() {
     echo ""
     print_success "🎉 Установка завершена!"
     echo ""
-    print_info "📱 Следующий шаг:"
-    echo "  Отправьте /start боту в Telegram"
+    print_info "👑 Настройка администратора:"
+    echo "  1. Запустите бота: ./scripts/run-bot.sh"
+    echo "  2. Отправьте /start боту в личных сообщениях"
+    echo "  3. Ваш ID будет автоматически записан как супер-администратор"
+    echo "  4. Теперь вы можете управлять ботом через команды /admin, /style, /update"
     echo ""
     print_info "🛠️  Дополнительно:"
     echo "  ./scripts/debug.sh - отладка"
