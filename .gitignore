@@ -164,6 +164,7 @@ logs/updates/*
 
 # Данные администраторов
 admins.json
+logs/admins.json
 
 # Environment files
 .env

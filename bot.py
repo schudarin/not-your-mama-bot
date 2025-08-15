@@ -55,7 +55,7 @@ ADMIN_IDS = set()  # Множество ID администраторов
 SUPER_ADMIN_ID = None  # ID супер-администратора (первый пользователь)
 
 # Файл для сохранения администраторов
-ADMINS_FILE = "admins.json"
+ADMINS_FILE = "/opt/not-your-mama-bot/logs/admins.json"
 
 def load_admins():
     """Загружает список администраторов из файла"""
