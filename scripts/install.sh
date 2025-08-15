@@ -527,15 +527,56 @@ install_local() {
         pip install python-dotenv>=1.0.0
         pip install aiohttp>=3.8.0
         
-        # Устанавливаем ddgs (пробуем разные способы)
-        print_info "Попытка установки ddgs..."
-        if ! pip install ddgs>=9.0.0; then
-            print_error "Не удалось установить ddgs автоматически"
-            print_info "Установите ddgs вручную: pip install ddgs"
-            print_info "Или используйте: pip install duckduckgo-search"
-            exit 1
-        else
+        # Проверяем версию Python для ddgs
+        PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        PYTHON_MAJOR=$(python3 -c "import sys; print(sys.version_info.major)")
+        PYTHON_MINOR=$(python3 -c "import sys; print(sys.version_info.minor)")
+        
+        print_info "Версия Python: $PYTHON_VERSION"
+        
+        # ddgs требует Python 3.9+
+        if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 9 ]); then
+            print_warning "ddgs требует Python 3.9+, текущая версия: $PYTHON_VERSION"
+            print_info "Обновляем Python до версии 3.9+..."
+            
+            # Обновляем Python на Ubuntu/Debian
+            if command -v apt-get &> /dev/null; then
+                print_info "Обновление Python через apt..."
+                apt-get update
+                apt-get install -y software-properties-common
+                add-apt-repository ppa:deadsnakes/ppa -y
+                apt-get update
+                apt-get install -y python3.9 python3.9-venv python3.9-pip
+                
+                # Создаем новое виртуальное окружение с Python 3.9
+                if command -v python3.9 &> /dev/null; then
+                    print_success "Python 3.9 установлен"
+                    print_info "Пересоздаем виртуальное окружение с Python 3.9..."
+                    rm -rf venv
+                    python3.9 -m venv venv
+                    source venv/bin/activate
+                    pip install --upgrade pip
+                else
+                    print_error "Не удалось установить Python 3.9"
+                    print_info "Попробуйте установить вручную:"
+                    print_info "  sudo apt update && sudo apt install python3.9 python3.9-venv"
+                    exit 1
+                fi
+            else
+                print_error "Автоматическое обновление Python поддерживается только для Ubuntu/Debian"
+                print_info "Установите Python 3.9+ вручную и запустите установку заново"
+                exit 1
+            fi
+        fi
+        
+        # Устанавливаем ddgs
+        print_info "Устанавливаем ddgs..."
+        if pip install ddgs>=9.0.0; then
             print_success "ddgs установлен"
+        else
+            print_error "Не удалось установить ddgs"
+            print_info "Попробуйте установить вручную: pip install ddgs"
+            exit 1
         fi
     fi
     print_success "Зависимости установлены успешно"
@@ -707,15 +748,56 @@ install_systemd() {
         pip install python-dotenv>=1.0.0
         pip install aiohttp>=3.8.0
         
-        # Устанавливаем ddgs (пробуем разные способы)
-        print_info "Попытка установки ddgs..."
-        if ! pip install ddgs>=9.0.0; then
-            print_error "Не удалось установить ddgs автоматически"
-            print_info "Установите ddgs вручную: pip install ddgs"
-            print_info "Или используйте: pip install duckduckgo-search"
-            exit 1
-        else
+        # Проверяем версию Python для ddgs
+        PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        PYTHON_MAJOR=$(python3 -c "import sys; print(sys.version_info.major)")
+        PYTHON_MINOR=$(python3 -c "import sys; print(sys.version_info.minor)")
+        
+        print_info "Версия Python: $PYTHON_VERSION"
+        
+        # ddgs требует Python 3.9+
+        if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 9 ]); then
+            print_warning "ddgs требует Python 3.9+, текущая версия: $PYTHON_VERSION"
+            print_info "Обновляем Python до версии 3.9+..."
+            
+            # Обновляем Python на Ubuntu/Debian
+            if command -v apt-get &> /dev/null; then
+                print_info "Обновление Python через apt..."
+                apt-get update
+                apt-get install -y software-properties-common
+                add-apt-repository ppa:deadsnakes/ppa -y
+                apt-get update
+                apt-get install -y python3.9 python3.9-venv python3.9-pip
+                
+                # Создаем новое виртуальное окружение с Python 3.9
+                if command -v python3.9 &> /dev/null; then
+                    print_success "Python 3.9 установлен"
+                    print_info "Пересоздаем виртуальное окружение с Python 3.9..."
+                    rm -rf venv
+                    python3.9 -m venv venv
+                    source venv/bin/activate
+                    pip install --upgrade pip
+                else
+                    print_error "Не удалось установить Python 3.9"
+                    print_info "Попробуйте установить вручную:"
+                    print_info "  sudo apt update && sudo apt install python3.9 python3.9-venv"
+                    exit 1
+                fi
+            else
+                print_error "Автоматическое обновление Python поддерживается только для Ubuntu/Debian"
+                print_info "Установите Python 3.9+ вручную и запустите установку заново"
+                exit 1
+            fi
+        fi
+        
+        # Устанавливаем ddgs
+        print_info "Устанавливаем ddgs..."
+        if pip install ddgs>=9.0.0; then
             print_success "ddgs установлен"
+        else
+            print_error "Не удалось установить ddgs"
+            print_info "Попробуйте установить вручную: pip install ddgs"
+            exit 1
         fi
         fi
     print_success "Зависимости установлены успешно"
