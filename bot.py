@@ -26,13 +26,18 @@ BOT_USERNAME = os.getenv("BOT_USERNAME", "").lstrip("@")
 
 openai = AsyncOpenAI(api_key=OPENAI_KEY)
 
-# Персона бота по умолчанию
+# Персона бота по умолчанию (нейтральная)
 DEFAULT_STYLE = (
-    "Ты — «Мразь», грубая и ехидная демоница девопс-старой школы. "
-    "Отвечай резко, саркастично, но без прямых угроз и дискриминации. "
-    "Уместны баня/пиво/старперский IT-юмор в духе bash.org. "
-    "Краткость приветствуется, но допускай едкие колкости."
+    "Ты — полезный и дружелюбный ИИ-ассистент. "
+    "Отвечай вежливо, информативно и по делу. "
+    "Можешь использовать юмор, но оставайся уважительным. "
+    "Краткость приветствуется, но давай полные ответы."
 )
+
+# Система администраторов
+ADMIN_IDS = set()  # Множество ID администраторов
+SUPER_ADMIN_ID = None  # ID супер-администратора (первый пользователь)
+
 STYLES = {}  # chat_id -> system prompt (живёт в памяти; после рестарта пусто)
 
 MAX_CHUNK = 4000  # предел для сообщений телеги (~4096)
@@ -64,33 +69,178 @@ async def send_reply(msg, text: str):
 
 # ─── КОМАНДЫ ────────────────────────────────────────────────────────
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "Без имени"
+    
+    # Автоматически назначаем первого пользователя супер-администратором
+    global SUPER_ADMIN_ID
+    if SUPER_ADMIN_ID is None:
+        SUPER_ADMIN_ID = user_id
+        ADMIN_IDS.add(user_id)
+        log.info(f"Назначен супер-администратор: {username} (ID: {user_id})")
+    
+    # Логируем всех пользователей для отладки
+    log.info(f"Пользователь {username} (ID: {user_id}) использовал /start")
+    
+    # Разные сообщения для администраторов и обычных пользователей
+    if user_id in ADMIN_IDS:
+        admin_commands = """
+🔧 Команды администратора:
+/admin - Управление администраторами
+/style - Настройка стиля бота
+/update - Обновление бота (только в личных сообщениях)
+"""
+    else:
+        admin_commands = ""
+    
     await update.message.reply_text(
-        "Я — Мразь. Пингуй меня в группе по упоминанию, словом «мразь», "
-        "или ответом (reply) на моё сообщение. Для поиска в сети скажи: "
-        "«гугли…», «найди…», «поиск…», «в интернете…». "
-        "Команда /style <текст> меняет мой тон в этом чате."
+        f"Привет! Я — {BOT_USERNAME}. 🤖\n\n"
+        "📋 Основные команды:\n"
+        "• Упоминай меня в группах или используй слово «мразь»\n"
+        "• Отвечай на мои сообщения\n"
+        "• Для поиска: «гугли», «найди», «поиск», «в интернете»\n"
+        "• /style - изменить мой стиль в этом чате\n"
+        "• /ping - проверить работу бота\n\n"
+        f"💬 Личные сообщения: {admin_commands}"
     )
 
 async def cmd_style(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    current_style = STYLES.get(chat_id, DEFAULT_STYLE)
+    
     style = " ".join(ctx.args).strip()
     if not style:
-        return await update.message.reply_text("Использование: /style <описание стиля>")
-    STYLES[update.effective_chat.id] = style
-    await update.message.reply_text("✅ Стиль обновлён для этого чата.")
+        # Показываем текущий стиль и предлагаем обновить
+        await update.message.reply_text(
+            f"🎭 Текущий стиль бота в этом чате:\n\n"
+            f"«{current_style}»\n\n"
+            f"💡 Для изменения отправьте:\n"
+            f"/style <новое описание стиля>\n\n"
+            f"📝 Примеры:\n"
+            f"• /style Ты — вежливый помощник\n"
+            f"• /style Ты — саркастичный бот\n"
+            f"• /style Ты — грубый девопс-инженер"
+        )
+        return
+    
+    # Обновляем стиль
+    STYLES[chat_id] = style
+    await update.message.reply_text(
+        f"✅ Стиль обновлён для этого чата!\n\n"
+        f"🎭 Новый стиль:\n"
+        f"«{style}»"
+    )
 
 async def cmd_ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("pong")
 
+async def cmd_admin(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Команда для управления администраторами"""
+    user_id = update.effective_user.id
+    
+    # Проверяем права администратора
+    if user_id not in ADMIN_IDS:
+        return await update.message.reply_text("❌ У вас нет прав администратора")
+    
+    # Проверяем, что это личное сообщение
+    if update.effective_chat.type != "private":
+        return await update.message.reply_text("❌ Управление администраторами доступно только в личных сообщениях")
+    
+    args = ctx.args
+    if not args:
+        # Показываем список администраторов
+        admin_list = []
+        for admin_id in ADMIN_IDS:
+            if admin_id == SUPER_ADMIN_ID:
+                admin_list.append(f"👑 {admin_id} (супер-админ)")
+            else:
+                admin_list.append(f"🔧 {admin_id}")
+        
+        await update.message.reply_text(
+            f"👥 Список администраторов:\n\n"
+            f"{chr(10).join(admin_list)}\n\n"
+            f"💡 Команды управления:\n"
+            f"• /admin add <ID> - добавить администратора\n"
+            f"• /admin remove <ID> - удалить администратора\n"
+            f"• /admin list - показать список (текущая команда)"
+        )
+        return
+    
+    action = args[0].lower()
+    
+    if action == "list":
+        # Показываем список администраторов
+        admin_list = []
+        for admin_id in ADMIN_IDS:
+            if admin_id == SUPER_ADMIN_ID:
+                admin_list.append(f"👑 {admin_id} (супер-админ)")
+            else:
+                admin_list.append(f"🔧 {admin_id}")
+        
+        await update.message.reply_text(
+            f"👥 Список администраторов:\n\n"
+            f"{chr(10).join(admin_list)}"
+        )
+    
+    elif action == "add":
+        if len(args) < 2:
+            await update.message.reply_text("❌ Укажите ID пользователя: /admin add <ID>")
+            return
+        
+        try:
+            new_admin_id = int(args[1])
+            if new_admin_id in ADMIN_IDS:
+                await update.message.reply_text("✅ Этот пользователь уже администратор")
+                return
+            
+            ADMIN_IDS.add(new_admin_id)
+            await update.message.reply_text(f"✅ Администратор {new_admin_id} добавлен")
+            
+        except ValueError:
+            await update.message.reply_text("❌ Неверный формат ID. ID должен быть числом")
+    
+    elif action == "remove":
+        if len(args) < 2:
+            await update.message.reply_text("❌ Укажите ID пользователя: /admin remove <ID>")
+            return
+        
+        try:
+            remove_admin_id = int(args[1])
+            
+            # Нельзя удалить супер-администратора
+            if remove_admin_id == SUPER_ADMIN_ID:
+                await update.message.reply_text("❌ Нельзя удалить супер-администратора")
+                return
+            
+            if remove_admin_id not in ADMIN_IDS:
+                await update.message.reply_text("❌ Этот пользователь не является администратором")
+                return
+            
+            ADMIN_IDS.remove(remove_admin_id)
+            await update.message.reply_text(f"✅ Администратор {remove_admin_id} удален")
+            
+        except ValueError:
+            await update.message.reply_text("❌ Неверный формат ID. ID должен быть числом")
+    
+    else:
+        await update.message.reply_text(
+            "❌ Неизвестная команда. Используйте:\n"
+            "• /admin add <ID> - добавить администратора\n"
+            "• /admin remove <ID> - удалить администратора\n"
+            "• /admin list - показать список"
+        )
+
 async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Команда для обновления бота (только для администраторов)"""
-    # Проверяем, что это личное сообщение от администратора
+    user_id = update.effective_user.id
+    
+    # Проверяем права администратора
+    if user_id not in ADMIN_IDS:
+        return await update.message.reply_text("❌ У вас нет прав для обновления бота")
+    
+    # Проверяем, что это личное сообщение
     if update.effective_chat.type != "private":
         return await update.message.reply_text("❌ Обновление доступно только в личных сообщениях")
-    
-    # Здесь можно добавить проверку на администратора по user_id
-    # ADMIN_IDS = [123456789, 987654321]  # ID администраторов
-    # if update.effective_user.id not in ADMIN_IDS:
-    #     return await update.message.reply_text("❌ У вас нет прав для обновления бота")
     
     await update.message.reply_text("🔄 Начинаю обновление бота...")
     
@@ -195,6 +345,7 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("style", cmd_style))
     app.add_handler(CommandHandler("ping",  cmd_ping))
+    app.add_handler(CommandHandler("admin", cmd_admin))
     app.add_handler(CommandHandler("update", cmd_update))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     log.info("Bot is up as @%s", BOT_USERNAME)
