@@ -25,7 +25,7 @@ from telegram.ext import (
     ApplicationBuilder, MessageHandler, CommandHandler,
     ContextTypes, filters
 )
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 from openai import AsyncOpenAI
 import requests
 
@@ -101,10 +101,10 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
     
     # Проверяем версию библиотеки
     try:
-        import ddgs
-        log.info(f"DDGS version: {ddgs.__version__}")
+        import duckduckgo_search
+        log.info(f"DuckDuckGo Search version: {duckduckgo_search.__version__}")
     except:
-        log.warning("Could not get DDGS version")
+        log.warning("Could not get DuckDuckGo Search version")
     
     try:
         log.info(f"Starting search for query: '{query}'")

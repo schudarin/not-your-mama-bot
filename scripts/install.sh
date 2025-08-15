@@ -530,10 +530,10 @@ install_local() {
         print_error "python-telegram-bot не установлен"
     fi
     
-    if pip show ddgs &> /dev/null; then
-        print_success "ddgs установлен"
+    if pip show duckduckgo-search &> /dev/null; then
+        print_success "duckduckgo-search установлен"
     else
-        print_error "ddgs не установлен"
+        print_error "duckduckgo-search не установлен"
     fi
     
     if pip show openai &> /dev/null; then
@@ -691,10 +691,10 @@ install_systemd() {
         print_error "python-telegram-bot не установлен"
     fi
     
-    if pip show ddgs &> /dev/null; then
-        print_success "ddgs установлен"
+    if pip show duckduckgo-search &> /dev/null; then
+        print_success "duckduckgo-search установлен"
     else
-        print_error "ddgs не установлен"
+        print_error "duckduckgo-search не установлен"
     fi
     
     if pip show openai &> /dev/null; then
