@@ -5,8 +5,14 @@
 ## Быстрый старт
 
 ```bash
-# Установка
+# 1. Установка
 ./scripts/install.sh
+
+# 2. Запуск бота
+python bot.py
+
+# 3. Настройка (в Telegram)
+# Отправьте /start в личных сообщениях боту
 
 # Удаление
 sudo ./scripts/uninstall.sh
