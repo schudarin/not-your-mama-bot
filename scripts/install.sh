@@ -588,9 +588,10 @@ install_systemd() {
     cp -r . /opt/not-your-mama-bot/
     chown -R botuser:botuser /opt/not-your-mama-bot
     
-    # Настраиваем Git безопасность для botuser
+    # Настраиваем Git безопасность
     print_info "Настройка Git безопасности..."
-    sudo -u botuser git config --global --add safe.directory /opt/not-your-mama-bot || true
+    # Настраиваем глобально для всех пользователей
+    git config --global --add safe.directory /opt/not-your-mama-bot || true
     print_success "Git безопасность настроена"
     
     # Проверяем и устанавливаем python3-venv если нужно
