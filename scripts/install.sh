@@ -556,7 +556,13 @@ install_local() {
                     python3.9 -m venv venv
                     source venv/bin/activate
                     pip install --upgrade pip
-                else
+                    # Переустанавливаем все зависимости в новом окружении
+                    print_info "Переустанавливаем зависимости в новом окружении..."
+                    pip install python-telegram-bot>=20.0
+                    pip install openai>=1.0.0
+                    pip install requests>=2.25.0
+                    pip install python-dotenv>=1.0.0
+                    pip install aiohttp>=3.8.0                else
                     print_error "Не удалось установить Python 3.9"
                     print_info "Попробуйте установить вручную:"
                     print_info "  sudo apt update sudo apt update && sudo apt install python3.9 python3.9-venvsudo apt update && sudo apt install python3.9 python3.9-venv sudo apt install python3.9 python3.9-dev python3.9-venv"
@@ -777,7 +783,13 @@ install_systemd() {
                     python3.9 -m venv venv
                     source venv/bin/activate
                     pip install --upgrade pip
-                else
+                    # Переустанавливаем все зависимости в новом окружении
+                    print_info "Переустанавливаем зависимости в новом окружении..."
+                    pip install python-telegram-bot>=20.0
+                    pip install openai>=1.0.0
+                    pip install requests>=2.25.0
+                    pip install python-dotenv>=1.0.0
+                    pip install aiohttp>=3.8.0                else
                     print_error "Не удалось установить Python 3.9"
                     print_info "Попробуйте установить вручную:"
                     print_info "  sudo apt update sudo apt update && sudo apt install python3.9 python3.9-venvsudo apt update && sudo apt install python3.9 python3.9-venv sudo apt install python3.9 python3.9-dev python3.9-venv"
