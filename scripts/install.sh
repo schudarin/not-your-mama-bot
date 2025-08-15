@@ -546,7 +546,7 @@ install_local() {
                 apt-get install -y software-properties-common
                 add-apt-repository ppa:deadsnakes/ppa -y
                 apt-get update
-                apt-get install -y python3.9 python3.9-venv python3.9-pip
+                apt-get install -y python3.9 python3.9-dev python3.9-venv
                 
                 # Создаем новое виртуальное окружение с Python 3.9
                 if command -v python3.9 &> /dev/null; then
@@ -559,7 +559,7 @@ install_local() {
                 else
                     print_error "Не удалось установить Python 3.9"
                     print_info "Попробуйте установить вручную:"
-                    print_info "  sudo apt update && sudo apt install python3.9 python3.9-venv"
+                    print_info "  sudo apt update sudo apt update && sudo apt install python3.9 python3.9-venvsudo apt update && sudo apt install python3.9 python3.9-venv sudo apt install python3.9 python3.9-dev python3.9-venv"
                     exit 1
                 fi
             else
@@ -767,7 +767,7 @@ install_systemd() {
                 apt-get install -y software-properties-common
                 add-apt-repository ppa:deadsnakes/ppa -y
                 apt-get update
-                apt-get install -y python3.9 python3.9-venv python3.9-pip
+                apt-get install -y python3.9 python3.9-dev python3.9-venv
                 
                 # Создаем новое виртуальное окружение с Python 3.9
                 if command -v python3.9 &> /dev/null; then
@@ -780,7 +780,7 @@ install_systemd() {
                 else
                     print_error "Не удалось установить Python 3.9"
                     print_info "Попробуйте установить вручную:"
-                    print_info "  sudo apt update && sudo apt install python3.9 python3.9-venv"
+                    print_info "  sudo apt update sudo apt update && sudo apt install python3.9 python3.9-venvsudo apt update && sudo apt install python3.9 python3.9-venv sudo apt install python3.9 python3.9-dev python3.9-venv"
                     exit 1
                 fi
             else
