@@ -54,8 +54,20 @@ chmod +x scripts/install.sh
 ### 4. Запуск бота
 
 ```bash
+# Универсальный способ (автоматически определяет тип установки):
 ./scripts/run-bot.sh
+
+# Для systemd установки (альтернативный способ):
+sudo systemctl start not-your-mama-bot
+sudo systemctl status not-your-mama-bot
+
+# Для локальной установки (альтернативный способ):
+cd /path/to/not-your-mama-bot
+source venv/bin/activate
+python bot.py
 ```
+
+**Важно:** Скрипт `run-bot.sh` автоматически определяет где установлен бот и активирует правильное виртуальное окружение.
 
 ### 5. Настройка администратора
 

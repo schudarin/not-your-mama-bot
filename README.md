@@ -9,7 +9,15 @@
 ./scripts/install.sh
 
 # 2. Запуск бота
+# Универсальный способ (автоматически определяет тип установки):
 ./scripts/run-bot.sh
+
+# Для systemd установки:
+sudo systemctl start not-your-mama-bot
+
+# Для локальной установки:
+source venv/bin/activate
+python bot.py
 
 # 3. Настройка (в Telegram)
 # Отправьте /start в личных сообщениях боту
