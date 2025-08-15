@@ -3,6 +3,7 @@ import os
 import re
 import logging
 import json
+import time
 from typing import Optional
 
 # Загружаем переменные окружения из .env файла
@@ -102,17 +103,19 @@ def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
             # Пробуем разные методы поиска с задержками
             results = []
             
-            # Метод 1: text поиск
+            # Метод 1: text поиск (без deprecated backend)
             try:
-                results = list(ddgs.text(query, max_results=num, backend="api"))
+                results = list(ddgs.text(query, max_results=num))
             except Exception as e:
                 log.warning(f"DDG text search failed: {e}")
+                time.sleep(1)  # Задержка перед следующим запросом
                 
                 # Метод 2: news поиск как fallback
                 try:
                     results = list(ddgs.news(query, max_results=num))
                 except Exception as e2:
                     log.warning(f"DDG news search failed: {e2}")
+                    time.sleep(1)  # Задержка перед следующим запросом
                     
                     # Метод 3: images поиск как последний fallback
                     try:
@@ -143,53 +146,20 @@ def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
 def web_search_google(query: str, num: int = 5) -> Optional[str]:
     """Альтернативный поиск через Google (если DuckDuckGo не работает)"""
     try:
-        # Используем простой Google поиск через requests
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        # Google поиск URL
-        search_url = f"https://www.google.com/search?q={requests.utils.quote(query)}&num={num}"
-        
-        response = requests.get(search_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        # Простой парсинг результатов (базовый)
-        content = response.text.lower()
-        
-        # Ищем ссылки в результатах
-        results = []
-        lines = content.split('\n')
-        
-        for line in lines:
-            if 'href=' in line and 'http' in line:
-                # Извлекаем URL и заголовок
-                if 'url=' in line:
-                    url_start = line.find('url=') + 4
-                    url_end = line.find('&', url_start)
-                    if url_end == -1:
-                        url_end = line.find('"', url_start)
-                    if url_end != -1:
-                        url = line[url_start:url_end]
-                        if url.startswith('http'):
-                            title = url.split('/')[-1].replace('_', ' ').replace('-', ' ')
-                            results.append({
-                                "title": title,
-                                "href": url,
-                                "body": f"Результат поиска: {title}"
-                            })
-                            if len(results) >= num:
-                                break
-        
-        if results:
-            lines = []
-            for r in results:
-                title = r.get("title", "Без заголовка")
-                link = r.get("href", "")
-                snippet = r.get("body", "")
-                lines.append(f"• [{title}]({link}) — {snippet}")
-            return "\n".join(lines)
+        # Используем DuckDuckGo как Google (более надежно)
+        with DDGS() as ddgs:
+            # Пробуем поиск новостей с большим количеством результатов
+            results = list(ddgs.news(query, max_results=num*2))
             
+            if results:
+                lines = []
+                for r in results[:num]:
+                    title = r.get("title", "Без заголовка")
+                    link = r.get("href", "")
+                    snippet = r.get("body", "")[:200] + "..." if len(r.get("body", "")) > 200 else r.get("body", "")
+                    lines.append(f"• [{title}]({link}) — {snippet}")
+                return "\n".join(lines)
+                
     except Exception as e:
         log.warning(f"Google search error: {e}")
         
