@@ -3,7 +3,6 @@ import os
 import re
 import logging
 import json
-import time
 from typing import Optional
 
 # Загружаем переменные окружения из .env файла
@@ -96,74 +95,29 @@ MAX_CHUNK = 4000  # предел для сообщений телеги (~4096)
 def chunk_text(s: str, n: int = MAX_CHUNK):
     return (s[i:i+n] for i in range(0, len(s), n))
 
-def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
-    """Возвращает Markdown-список результатов DuckDuckGo или None при ошибке/пусто."""
+def web_search(query: str, num: int = 5) -> Optional[str]:
+    """Простой и надежный поиск через DuckDuckGo"""
     try:
         with DDGS() as ddgs:
-            # Пробуем разные методы поиска с задержками
-            results = []
+            # Используем только news search - он работает стабильно
+            results = list(ddgs.news(query, max_results=num))
             
-            # Метод 1: text поиск (без deprecated backend)
-            try:
-                results = list(ddgs.text(query, max_results=num))
-            except Exception as e:
-                log.warning(f"DDG text search failed: {e}")
-                time.sleep(1)  # Задержка перед следующим запросом
+            if not results:
+                return None
                 
-                # Метод 2: news поиск как fallback
-                try:
-                    results = list(ddgs.news(query, max_results=num))
-                except Exception as e2:
-                    log.warning(f"DDG news search failed: {e2}")
-                    time.sleep(1)  # Задержка перед следующим запросом
-                    
-                    # Метод 3: images поиск как последний fallback
-                    try:
-                        results = list(ddgs.images(query, max_results=num))
-                        # Преобразуем результаты изображений в текстовый формат
-                        results = [{"title": r.get("title", "Изображение"), 
-                                   "href": r.get("href", ""), 
-                                   "body": f"Изображение: {r.get('title', '')}"} for r in results]
-                    except Exception as e3:
-                        log.warning(f"DDG images search failed: {e3}")
-                        return None
+            lines = []
+            for r in results[:num]:
+                title = r.get("title", "Без заголовка")
+                link = r.get("href", "")
+                snippet = (r.get("body") or "")[:150]  # Ограничиваем длину
+                if len(snippet) == 150:
+                    snippet += "..."
+                lines.append(f"• [{title}]({link}) — {snippet}")
+            return "\n".join(lines)
             
     except Exception as e:
-        log.warning("DDG error: %s", e)
+        log.warning(f"Search error: {e}")
         return None
-        
-    if not results:
-        return None
-        
-    lines = []
-    for r in results[:num]:
-        title   = r.get("title") or "Без заголовка"
-        link    = r.get("href")  or ""
-        snippet = (r.get("body") or "").replace("\n"," ")
-        lines.append(f"• [{title}]({link}) — {snippet}")
-    return "\n".join(lines)
-
-def web_search_google(query: str, num: int = 5) -> Optional[str]:
-    """Альтернативный поиск через Google (если DuckDuckGo не работает)"""
-    try:
-        # Используем DuckDuckGo как Google (более надежно)
-        with DDGS() as ddgs:
-            # Пробуем поиск новостей с большим количеством результатов
-            results = list(ddgs.news(query, max_results=num*2))
-            
-            if results:
-                lines = []
-                for r in results[:num]:
-                    title = r.get("title", "Без заголовка")
-                    link = r.get("href", "")
-                    snippet = r.get("body", "")[:200] + "..." if len(r.get("body", "")) > 200 else r.get("body", "")
-                    lines.append(f"• [{title}]({link}) — {snippet}")
-                return "\n".join(lines)
-                
-    except Exception as e:
-        log.warning(f"Google search error: {e}")
-        
-    return None
 
 async def send_reply(msg, text: str):
     for ch in chunk_text(text):
@@ -428,14 +382,9 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", text_lower):
         query = text  # можно усложнить парсер, но для начала берём весь текст
         
-        # Пробуем DuckDuckGo сначала
-        results_md = web_search_ddg(query)
+        # Простой поиск через DuckDuckGo
+        results_md = web_search(query)
         
-        # Если DuckDuckGo не работает, пробуем Google
-        if not results_md:
-            log.info("DuckDuckGo не работает, пробуем Google...")
-            results_md = web_search_google(query)
-            
         if not results_md:
             return await send_reply(msg, "Поиск в интернете временно недоступен.")
 
