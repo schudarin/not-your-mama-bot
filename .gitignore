@@ -154,3 +154,18 @@ config.py
 secrets.py
 *.key
 *.pem
+
+# Logs
+logs/*.log
+logs/debug/*
+logs/errors/*
+logs/updates/*
+!logs/.gitkeep
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Test files
+test_*.py

@@ -251,7 +251,7 @@ EOF
     chmod 600 .env
     
     # Устанавливаем systemd сервис
-    cp not-your-mama-bot.service /etc/systemd/system/
+    cp scripts/not-your-mama-bot.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable not-your-mama-bot
     systemctl start not-your-mama-bot
