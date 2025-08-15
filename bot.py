@@ -25,18 +25,13 @@ from telegram.ext import (
     ApplicationBuilder, MessageHandler, CommandHandler,
     ContextTypes, filters
 )
-# Пробуем импортировать ddgs, если не получится - используем duckduckgo_search
+# Импортируем ddgs для поиска
 try:
     from ddgs import DDGS
     DDGS_AVAILABLE = True
 except ImportError:
-    try:
-        from duckduckgo_search import DDGS
-        DDGS_AVAILABLE = False
-        log.warning("ddgs недоступен, используем duckduckgo_search")
-    except ImportError:
-        log.error("Ни ddgs, ни duckduckgo_search не установлены!")
-        DDGS_AVAILABLE = None
+    log.error("ddgs не установлен! Установите: pip install ddgs")
+    DDGS_AVAILABLE = None
 from openai import AsyncOpenAI
 import requests
 
@@ -117,14 +112,8 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
             log.info(f"DDGS version: {ddgs.__version__}")
         except:
             log.warning("Could not get DDGS version")
-    elif DDGS_AVAILABLE is False:
-        try:
-            import duckduckgo_search
-            log.info(f"DuckDuckGo Search version: {duckduckgo_search.__version__}")
-        except:
-            log.warning("Could not get DuckDuckGo Search version")
     else:
-        log.error("No search library available")
+        log.error("ddgs не установлен")
         return None
     
     try:
