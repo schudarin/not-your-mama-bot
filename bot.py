@@ -27,6 +27,7 @@ from telegram.ext import (
 )
 from duckduckgo_search import DDGS
 from openai import AsyncOpenAI
+import requests
 
 # ─── ЛОГИ ───────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -98,12 +99,39 @@ def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
     """Возвращает Markdown-список результатов DuckDuckGo или None при ошибке/пусто."""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=num))
+            # Пробуем разные методы поиска с задержками
+            results = []
+            
+            # Метод 1: text поиск
+            try:
+                results = list(ddgs.text(query, max_results=num, backend="api"))
+            except Exception as e:
+                log.warning(f"DDG text search failed: {e}")
+                
+                # Метод 2: news поиск как fallback
+                try:
+                    results = list(ddgs.news(query, max_results=num))
+                except Exception as e2:
+                    log.warning(f"DDG news search failed: {e2}")
+                    
+                    # Метод 3: images поиск как последний fallback
+                    try:
+                        results = list(ddgs.images(query, max_results=num))
+                        # Преобразуем результаты изображений в текстовый формат
+                        results = [{"title": r.get("title", "Изображение"), 
+                                   "href": r.get("href", ""), 
+                                   "body": f"Изображение: {r.get('title', '')}"} for r in results]
+                    except Exception as e3:
+                        log.warning(f"DDG images search failed: {e3}")
+                        return None
+            
     except Exception as e:
         log.warning("DDG error: %s", e)
         return None
+        
     if not results:
         return None
+        
     lines = []
     for r in results[:num]:
         title   = r.get("title") or "Без заголовка"
@@ -111,6 +139,61 @@ def web_search_ddg(query: str, num: int = 5) -> Optional[str]:
         snippet = (r.get("body") or "").replace("\n"," ")
         lines.append(f"• [{title}]({link}) — {snippet}")
     return "\n".join(lines)
+
+def web_search_google(query: str, num: int = 5) -> Optional[str]:
+    """Альтернативный поиск через Google (если DuckDuckGo не работает)"""
+    try:
+        # Используем простой Google поиск через requests
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        # Google поиск URL
+        search_url = f"https://www.google.com/search?q={requests.utils.quote(query)}&num={num}"
+        
+        response = requests.get(search_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Простой парсинг результатов (базовый)
+        content = response.text.lower()
+        
+        # Ищем ссылки в результатах
+        results = []
+        lines = content.split('\n')
+        
+        for line in lines:
+            if 'href=' in line and 'http' in line:
+                # Извлекаем URL и заголовок
+                if 'url=' in line:
+                    url_start = line.find('url=') + 4
+                    url_end = line.find('&', url_start)
+                    if url_end == -1:
+                        url_end = line.find('"', url_start)
+                    if url_end != -1:
+                        url = line[url_start:url_end]
+                        if url.startswith('http'):
+                            title = url.split('/')[-1].replace('_', ' ').replace('-', ' ')
+                            results.append({
+                                "title": title,
+                                "href": url,
+                                "body": f"Результат поиска: {title}"
+                            })
+                            if len(results) >= num:
+                                break
+        
+        if results:
+            lines = []
+            for r in results:
+                title = r.get("title", "Без заголовка")
+                link = r.get("href", "")
+                snippet = r.get("body", "")
+                lines.append(f"• [{title}]({link}) — {snippet}")
+            return "\n".join(lines)
+            
+    except Exception as e:
+        log.warning(f"Google search error: {e}")
+        
+    return None
 
 async def send_reply(msg, text: str):
     for ch in chunk_text(text):
@@ -362,7 +445,15 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # ловим «интернет/сеть/поиск/гугл/гугли/гуглить/найди…»
     if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", text_lower):
         query = text  # можно усложнить парсер, но для начала берём весь текст
+        
+        # Пробуем DuckDuckGo сначала
         results_md = web_search_ddg(query)
+        
+        # Если DuckDuckGo не работает, пробуем Google
+        if not results_md:
+            log.info("DuckDuckGo не работает, пробуем Google...")
+            results_md = web_search_google(query)
+            
         if not results_md:
             return await send_reply(msg, "Поиск в интернете временно недоступен.")
 
