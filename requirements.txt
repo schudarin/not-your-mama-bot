@@ -1,5 +1,5 @@
 python-telegram-bot>=20.0
-ddgs>=8.0.0
+ddgs
 openai>=1.0.0
 requests>=2.25.0
 python-dotenv>=1.0.0
