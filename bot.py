@@ -137,9 +137,32 @@ from datetime import datetime, timedelta
 
 # Переменные для проверки обновлений
 LAST_UPDATE_CHECK = None
-UPDATE_CHECK_INTERVAL = timedelta(hours=6)  # Проверяем каждые 6 часов
+UPDATE_CHECK_INTERVAL = timedelta(hours=1)  # Проверяем каждый час
 LATEST_VERSION = None
 UPDATE_AVAILABLE = False
+
+def is_auto_update_enabled():
+    """Проверяет, включено ли автообновление через cron"""
+    try:
+        import subprocess
+        import os
+        
+        # Проверяем наличие файла cron-update.sh
+        cron_script = "/opt/not-your-mama-bot/cron-update.sh"
+        if os.path.exists(cron_script):
+            # Проверяем, есть ли задача в crontab
+            process = subprocess.run(
+                ["crontab", "-u", "botuser", "-l"],
+                capture_output=True,
+                text=True
+            )
+            if process.returncode == 0 and "cron-update.sh" in process.stdout:
+                return True
+        
+        return False
+    except Exception as e:
+        log.warning(f"Ошибка проверки автообновления: {e}")
+        return False
 
 async def check_for_updates():
     """Проверяет доступность обновлений в GitHub"""
@@ -181,6 +204,11 @@ async def check_for_updates():
                         
     except Exception as e:
         log.warning(f"Ошибка проверки обновлений: {e}")
+
+async def should_notify_about_updates():
+    """Определяет, нужно ли уведомлять об обновлениях"""
+    # Уведомляем только если автообновление не включено
+    return UPDATE_AVAILABLE and not is_auto_update_enabled()
 
 async def update_checker():
     """Фоновая задача для проверки обновлений"""
@@ -375,7 +403,11 @@ async def cmd_version(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         version_msg = f"🤖 Версия бота: {current_version}"
         
         if UPDATE_AVAILABLE:
-            version_msg += f"\n\n🆕 Доступно обновление!\n💡 Для обновления перезапустите контейнер/сервис"
+            auto_update_enabled = is_auto_update_enabled()
+            if auto_update_enabled:
+                version_msg += f"\n\n🆕 Доступно обновление!\n✅ Автообновление включено - обновится автоматически"
+            else:
+                version_msg += f"\n\n🆕 Доступно обновление!\n❌ Автообновление отключено\n💡 Для обновления перезапустите контейнер/сервис"
         else:
             version_msg += f"\n\n✅ Бот обновлен до последней версии"
         
@@ -435,8 +467,9 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # 2) ПРОВЕРКА ОБНОВЛЕНИЙ (для администраторов)
     if msg.chat.type == "private" and update.effective_user.id in ADMIN_IDS:
         await check_for_updates()
-        if UPDATE_AVAILABLE:
-            await send_reply(msg, "🆕 Доступно обновление бота! Перезапустите контейнер/сервис для применения.")
+        if await should_notify_about_updates():
+            auto_update_status = "✅ Автообновление включено" if is_auto_update_enabled() else "❌ Автообновление отключено"
+            await send_reply(msg, f"🆕 Доступно обновление бота!\n{auto_update_status}\n💡 Для применения обновления перезапустите контейнер/сервис.")
     
     # 3) ТРИГГЕР ОБЫЧНОГО ОТВЕТА
     is_reply_to_bot = (
