@@ -30,22 +30,41 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# Загрузка переменных окружения
+load_env() {
+    if [ -f ".env" ]; then
+        print_info "Загрузка переменных из .env файла..."
+        export $(cat .env | grep -v '^#' | xargs)
+        print_success "Переменные окружения загружены"
+    else
+        print_warning ".env файл не найден"
+    fi
+}
+
 # Проверка переменных окружения
 check_env() {
     print_info "Проверка переменных окружения..."
     
+    # Загружаем переменные из .env если они не установлены
+    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$OPENAI_API_KEY" ] || [ -z "$BOT_USERNAME" ]; then
+        load_env
+    fi
+    
     if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
         print_error "TELEGRAM_BOT_TOKEN не установлен"
+        print_info "Убедитесь, что .env файл существует и содержит TELEGRAM_BOT_TOKEN"
         return 1
     fi
     
     if [ -z "$OPENAI_API_KEY" ]; then
         print_error "OPENAI_API_KEY не установлен"
+        print_info "Убедитесь, что .env файл существует и содержит OPENAI_API_KEY"
         return 1
     fi
     
     if [ -z "$BOT_USERNAME" ]; then
         print_error "BOT_USERNAME не установлен"
+        print_info "Убедитесь, что .env файл существует и содержит BOT_USERNAME"
         return 1
     fi
     
@@ -77,6 +96,9 @@ check_dependencies() {
     
     # Активируем виртуальное окружение
     source venv/bin/activate
+    
+    # Загружаем переменные окружения для тестов
+    load_env
     
     # Проверяем зависимости
     if ! pip show python-telegram-bot &> /dev/null; then
@@ -218,6 +240,9 @@ test_bot() {
     print_warning "Нажмите Ctrl+C для остановки."
     echo ""
     
+    # Загружаем переменные окружения
+    load_env
+    
     # Запускаем бота с дополнительным логированием
     python -u bot.py
 }
@@ -252,9 +277,50 @@ main() {
             check_env && check_dependencies && test_bot
             ;;
         6)
-            check_env && check_dependencies && test_telegram && test_openai && test_duckduckgo
             echo ""
-            print_info "Все тесты завершены. Запускаем бота..."
+            print_info "🧪 Запуск всех тестов..."
+            echo ""
+            
+            # Проверка окружения
+            if check_env; then
+                print_success "✅ Окружение готово"
+            else
+                print_error "❌ Проблемы с окружением"
+                exit 1
+            fi
+            
+            # Проверка зависимостей
+            if check_dependencies; then
+                print_success "✅ Зависимости готовы"
+            else
+                print_error "❌ Проблемы с зависимостями"
+                exit 1
+            fi
+            
+            # Тест Telegram
+            if test_telegram; then
+                print_success "✅ Telegram работает"
+            else
+                print_error "❌ Проблемы с Telegram"
+            fi
+            
+            # Тест OpenAI
+            if test_openai; then
+                print_success "✅ OpenAI работает"
+            else
+                print_error "❌ Проблемы с OpenAI"
+            fi
+            
+            # Тест DuckDuckGo
+            if test_duckduckgo; then
+                print_success "✅ DuckDuckGo работает"
+            else
+                print_error "❌ Проблемы с DuckDuckGo"
+            fi
+            
+            echo ""
+            print_info "🎯 Все тесты завершены. Запускаем бота..."
+            echo ""
             test_bot
             ;;
         *)
