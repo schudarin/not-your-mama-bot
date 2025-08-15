@@ -8,9 +8,6 @@ Type=simple
 User=botuser
 Group=botuser
 WorkingDirectory=/opt/not-your-mama-bot
-Environment=TELEGRAM_BOT_TOKEN=%i
-Environment=OPENAI_API_KEY=%i
-Environment=BOT_USERNAME=%i
 ExecStart=/opt/not-your-mama-bot/venv/bin/python /opt/not-your-mama-bot/bot.py
 Restart=always
 RestartSec=10
