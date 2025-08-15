@@ -132,8 +132,15 @@ async def send_reply(msg, text: str):
 
 # ─── АВТОМАТИЧЕСКАЯ ПРОВЕРКА ОБНОВЛЕНИЙ ──────────────────────────────
 import asyncio
-import aiohttp
 from datetime import datetime, timedelta
+
+# Пытаемся импортировать aiohttp, если не получается - используем requests
+try:
+    import aiohttp
+    USE_AIOHTTP = True
+except ImportError:
+    import requests
+    USE_AIOHTTP = False
 
 # Переменные для проверки обновлений
 LAST_UPDATE_CHECK = None
@@ -187,20 +194,40 @@ async def check_for_updates():
         current_version = stdout.decode('utf-8').strip()
         
         # Получаем последнюю версию из GitHub
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://api.github.com/repos/schudarin/not-your-mama-bot/commits/master"
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    latest_commit = data.get('sha', '')
-                    
-                    if latest_commit and latest_commit != current_version:
-                        LATEST_VERSION = latest_commit
-                        UPDATE_AVAILABLE = True
-                        log.info(f"Доступно обновление: {current_version[:8]} -> {latest_commit[:8]}")
-                    else:
-                        UPDATE_AVAILABLE = False
+        if USE_AIOHTTP:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    "https://api.github.com/repos/schudarin/not-your-mama-bot/commits/master"
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        latest_commit = data.get('sha', '')
+                        
+                        if latest_commit and latest_commit != current_version:
+                            LATEST_VERSION = latest_commit
+                            UPDATE_AVAILABLE = True
+                            log.info(f"Доступно обновление: {current_version[:8]} -> {latest_commit[:8]}")
+                        else:
+                            UPDATE_AVAILABLE = False
+        else:
+            # Fallback на requests
+            try:
+                response = requests.get(
+                    "https://api.github.com/repos/schudarin/not-your-mama-bot/commits/master"
+                )
+                response.raise_for_status() # Raise an exception for bad status codes
+                data = response.json()
+                latest_commit = data.get('sha', '')
+                
+                if latest_commit and latest_commit != current_version:
+                    LATEST_VERSION = latest_commit
+                    UPDATE_AVAILABLE = True
+                    log.info(f"Доступно обновление: {current_version[:8]} -> {latest_commit[:8]}")
+                else:
+                    UPDATE_AVAILABLE = False
+            except requests.exceptions.RequestException as e:
+                log.warning(f"Ошибка запроса к GitHub API для проверки обновлений: {e}")
+                UPDATE_AVAILABLE = False
                         
     except Exception as e:
         log.warning(f"Ошибка проверки обновлений: {e}")
