@@ -81,11 +81,35 @@ check_pip() {
     print_success "pip3 найден"
 }
 
+# Проверка прав sudo
+check_sudo() {
+    if ! command -v sudo &> /dev/null; then
+        print_error "sudo не найден. Проверьте права доступа."
+        return 1
+    fi
+    
+    if ! sudo -n true 2>/dev/null; then
+        print_warning "sudo требует пароль. Убедитесь, что у вас есть права администратора."
+        return 1
+    fi
+    
+    return 0
+}
+
 # Проверка python3-venv
 check_venv() {
     if ! python3 -c "import venv" &> /dev/null; then
-        print_error "python3-venv не найден. Устанавливаем..."
-        install_system_deps
+        print_error "python3-venv не найден. Пробуем установить..."
+        
+        if check_sudo; then
+            install_system_deps
+        else
+            print_error "Не удалось установить python3-venv автоматически"
+            print_info "Установите вручную:"
+            echo "  sudo apt-get install python3-venv python3.8-venv"
+            echo "  или: pip install --user virtualenv"
+            return 1
+        fi
     fi
     print_success "python3-venv найден"
 }
@@ -220,19 +244,31 @@ install_local() {
     # Проверяем и устанавливаем python3-venv если нужно
     if ! python3 -c "import venv" &> /dev/null; then
         print_info "Устанавливаем python3-venv..."
-        if command -v apt-get &> /dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y python3-venv python3.8-venv
-        elif command -v yum &> /dev/null; then
-            sudo yum install -y python3-venv
-        elif command -v dnf &> /dev/null; then
-            sudo dnf install -y python3-venv
+        
+        # Пробуем с sudo
+        if check_sudo; then
+            if command -v apt-get &> /dev/null; then
+                sudo apt-get update
+                sudo apt-get install -y python3-venv python3.8-venv
+            elif command -v yum &> /dev/null; then
+                sudo yum install -y python3-venv
+            elif command -v dnf &> /dev/null; then
+                sudo dnf install -y python3-venv
+            fi
         fi
         
-        # Если все еще не работает, пробуем virtualenv
+        # Если sudo не работает или пакет не установился, пробуем virtualenv
         if ! python3 -c "import venv" &> /dev/null; then
             print_info "Устанавливаем virtualenv как альтернативу..."
-            pip3 install --user virtualenv
+            if pip3 install --user virtualenv; then
+                print_success "virtualenv установлен"
+            else
+                print_error "Не удалось установить virtualenv"
+                print_info "Установите вручную:"
+                echo "  pip install --user virtualenv"
+                echo "  или получите права sudo для установки python3-venv"
+                exit 1
+            fi
         fi
     fi
     
@@ -325,6 +361,12 @@ install_systemd() {
             yum install -y python3-venv
         elif command -v dnf &> /dev/null; then
             dnf install -y python3-venv
+        fi
+        
+        # Если не удалось, пробуем virtualenv
+        if ! python3 -c "import venv" &> /dev/null; then
+            print_info "Устанавливаем virtualenv как альтернативу..."
+            pip3 install virtualenv
         fi
     fi
     
