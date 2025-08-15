@@ -176,3 +176,8 @@ test_*.py
 
 # Installer configuration
 .install_config
+
+# Temporary scripts
+cron-update.sh
+temp-*.sh
+*.tmp
