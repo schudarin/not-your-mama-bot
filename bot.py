@@ -130,6 +130,92 @@ async def send_reply(msg, text: str):
     for ch in chunk_text(text):
         await msg.reply_text(ch, reply_to_message_id=msg.message_id, disable_web_page_preview=False)
 
+# ─── АВТОМАТИЧЕСКАЯ ПРОВЕРКА ОБНОВЛЕНИЙ ──────────────────────────────
+import asyncio
+import aiohttp
+from datetime import datetime, timedelta
+
+# Переменные для проверки обновлений
+LAST_UPDATE_CHECK = None
+UPDATE_CHECK_INTERVAL = timedelta(hours=1)  # Проверяем каждый час
+LATEST_VERSION = None
+UPDATE_AVAILABLE = False
+
+def is_auto_update_enabled():
+    """Проверяет, включено ли автообновление через cron"""
+    try:
+        import subprocess
+        import os
+        
+        # Проверяем наличие файла cron-update.sh
+        cron_script = "/opt/not-your-mama-bot/cron-update.sh"
+        if os.path.exists(cron_script):
+            # Проверяем, есть ли задача в crontab
+            process = subprocess.run(
+                ["crontab", "-u", "botuser", "-l"],
+                capture_output=True,
+                text=True
+            )
+            if process.returncode == 0 and "cron-update.sh" in process.stdout:
+                return True
+        
+        return False
+    except Exception as e:
+        log.warning(f"Ошибка проверки автообновления: {e}")
+        return False
+
+async def check_for_updates():
+    """Проверяет доступность обновлений в GitHub"""
+    global LAST_UPDATE_CHECK, LATEST_VERSION, UPDATE_AVAILABLE
+    
+    try:
+        # Проверяем не чаще чем раз в UPDATE_CHECK_INTERVAL
+        if (LAST_UPDATE_CHECK and 
+            datetime.now() - LAST_UPDATE_CHECK < UPDATE_CHECK_INTERVAL):
+            return
+        
+        LAST_UPDATE_CHECK = datetime.now()
+        
+        # Получаем текущую версию
+        import subprocess
+        process = await asyncio.create_subprocess_exec(
+            "git", "rev-parse", "HEAD",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        current_version = stdout.decode('utf-8').strip()
+        
+        # Получаем последнюю версию из GitHub
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.github.com/repos/schudarin/not-your-mama-bot/commits/master"
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    latest_commit = data.get('sha', '')
+                    
+                    if latest_commit and latest_commit != current_version:
+                        LATEST_VERSION = latest_commit
+                        UPDATE_AVAILABLE = True
+                        log.info(f"Доступно обновление: {current_version[:8]} -> {latest_commit[:8]}")
+                    else:
+                        UPDATE_AVAILABLE = False
+                        
+    except Exception as e:
+        log.warning(f"Ошибка проверки обновлений: {e}")
+
+async def should_notify_about_updates():
+    """Определяет, нужно ли уведомлять об обновлениях"""
+    # Уведомляем только если автообновление не включено
+    return UPDATE_AVAILABLE and not is_auto_update_enabled()
+
+async def update_checker():
+    """Фоновая задача для проверки обновлений"""
+    while True:
+        await check_for_updates()
+        await asyncio.sleep(3600)  # Проверяем каждый час
+
 # ─── КОМАНДЫ ───────────────────────────────────────────────────────────
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -311,7 +397,19 @@ async def cmd_version(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         stdout, stderr = await process.communicate()
         current_version = stdout.decode('utf-8').strip() if process.returncode == 0 else "Неизвестно"
         
+        # Проверяем обновления
+        await check_for_updates()
+        
         version_msg = f"🤖 Версия бота: {current_version}"
+        
+        if UPDATE_AVAILABLE:
+            auto_update_enabled = is_auto_update_enabled()
+            if auto_update_enabled:
+                version_msg += f"\n\n🆕 Доступно обновление!\n✅ Автообновление включено - обновится автоматически"
+            else:
+                version_msg += f"\n\n🆕 Доступно обновление!\n❌ Автообновление отключено\n💡 Для обновления перезапустите контейнер/сервис"
+        else:
+            version_msg += f"\n\n✅ Бот обновлен до последней версии"
         
         await update.message.reply_text(version_msg)
         
@@ -366,7 +464,14 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         return await send_reply(msg, f"🔍 По запросу «{query}»:\n\n{summary}\n\n📋 Подробные результаты:\n{results_md}")
 
-    # 2) ТРИГГЕР ОБЫЧНОГО ОТВЕТА
+    # 2) ПРОВЕРКА ОБНОВЛЕНИЙ (для администраторов)
+    if msg.chat.type == "private" and update.effective_user.id in ADMIN_IDS:
+        await check_for_updates()
+        if await should_notify_about_updates():
+            auto_update_status = "✅ Автообновление включено" if is_auto_update_enabled() else "❌ Автообновление отключено"
+            await send_reply(msg, f"🆕 Доступно обновление бота!\n{auto_update_status}\n💡 Для применения обновления перезапустите контейнер/сервис.")
+    
+    # 3) ТРИГГЕР ОБЫЧНОГО ОТВЕТА
     is_reply_to_bot = (
         msg.reply_to_message and msg.reply_to_message.from_user
         and msg.reply_to_message.from_user.username == BOT_USERNAME
@@ -403,13 +508,15 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ─── ЗАПУСК ─────────────────────────────────────────────────────────
 def main():
     app = ApplicationBuilder().token(TG_TOKEN).build()
-    
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("style", cmd_style))
     app.add_handler(CommandHandler("ping",  cmd_ping))
     app.add_handler(CommandHandler("admin", cmd_admin))
     app.add_handler(CommandHandler("version", cmd_version))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    
+    # Запускаем фоновую задачу проверки обновлений
+    asyncio.create_task(update_checker())
     
     log.info("Bot is up as @%s", BOT_USERNAME)
     app.run_polling()
