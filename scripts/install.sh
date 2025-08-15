@@ -527,7 +527,8 @@ install_local() {
         pip install python-dotenv>=1.0.0
         pip install aiohttp>=3.8.0
         
-        # Устанавливаем ddgs (пробуем один раз)
+        # Устанавливаем ddgs (пробуем разные способы)
+        print_info "Попытка установки ddgs..."
         if ! pip install ddgs>=9.0.0; then
             print_error "Не удалось установить ddgs автоматически"
             print_info "Установите ddgs вручную: pip install ddgs"
@@ -706,7 +707,8 @@ install_systemd() {
         pip install python-dotenv>=1.0.0
         pip install aiohttp>=3.8.0
         
-        # Устанавливаем ddgs (пробуем один раз)
+        # Устанавливаем ddgs (пробуем разные способы)
+        print_info "Попытка установки ddgs..."
         if ! pip install ddgs>=9.0.0; then
             print_error "Не удалось установить ddgs автоматически"
             print_info "Установите ddgs вручную: pip install ddgs"

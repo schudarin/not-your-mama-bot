@@ -30,7 +30,6 @@ try:
     from ddgs import DDGS
     DDGS_AVAILABLE = True
 except ImportError:
-    log.error("ddgs не установлен! Установите: pip install ddgs")
     DDGS_AVAILABLE = None
 from openai import AsyncOpenAI
 import requests
