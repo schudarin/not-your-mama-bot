@@ -511,29 +511,24 @@ def main():
     app.add_handler(CommandHandler("version", cmd_version))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     
-    log.info("Bot is up as @%s", BOT_USERNAME)
-    
     # Запускаем фоновую задачу проверки обновлений
-    async def start_bot():
-        # Создаем фоновую задачу для проверки обновлений
-        asyncio.create_task(periodic_update_checker())
-        # Запускаем бота
-        await app.initialize()
-        await app.start()
-        await app.run_polling()
+    async def background_updates():
+        await asyncio.sleep(10)  # Ждем 10 секунд перед первой проверкой
+        while True:
+            try:
+                await check_for_updates()
+            except Exception as e:
+                log.error(f"Ошибка в периодической проверке обновлений: {e}")
+            await asyncio.sleep(3600)  # Проверяем каждый час
     
-    # Запускаем бота с фоновой задачей
-    asyncio.run(start_bot())
+    # Создаем фоновую задачу
+    loop = asyncio.get_event_loop()
+    loop.create_task(background_updates())
+    
+    log.info("Bot is up as @%s", BOT_USERNAME)
+    app.run_polling()
 
-async def periodic_update_checker():
-    """Периодическая проверка обновлений"""
-    await asyncio.sleep(10)  # Ждем 10 секунд перед первой проверкой
-    while True:
-        try:
-            await check_for_updates()
-        except Exception as e:
-            log.error(f"Ошибка в периодической проверке обновлений: {e}")
-        await asyncio.sleep(3600)  # Проверяем каждый час
+
 
 if __name__ == "__main__":
     main()
