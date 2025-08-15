@@ -9,7 +9,7 @@
 ./scripts/install.sh
 
 # 2. Запуск бота
-python bot.py
+./scripts/run-bot.sh
 
 # 3. Настройка (в Telegram)
 # Отправьте /start в личных сообщениях боту

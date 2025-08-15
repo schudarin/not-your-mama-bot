@@ -54,7 +54,7 @@ chmod +x scripts/install.sh
 ### 4. Запуск бота
 
 ```bash
-python bot.py
+./scripts/run-bot.sh
 ```
 
 ### 5. Настройка администратора
