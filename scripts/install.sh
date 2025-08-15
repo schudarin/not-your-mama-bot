@@ -3,6 +3,9 @@
 # Интерактивный скрипт установки Not Your Mama Bot для Ubuntu/Linux
 set -e
 
+# Включаем подробное логирование для отладки
+set -x
+
 # Обработчик сигналов для показа инструкций при прерывании
 trap 'echo ""; print_warning "Установка прервана пользователем"; show_error_instructions; exit 1' INT TERM
 
@@ -42,15 +45,22 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Проверяем, что это Ubuntu/Linux
+# Проверяем операционную систему
 check_os() {
-    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-        print_error "Этот скрипт предназначен только для Ubuntu/Linux"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        print_info "Обнаружена macOS"
+        OS_TYPE="macos"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        print_info "Обнаружен Linux"
+        OS_TYPE="linux"
+        
+        if [ ! -f /etc/debian_version ] && [ ! -f /etc/redhat-release ]; then
+            print_warning "Рекомендуется Ubuntu/Debian. Установка может не работать на других дистрибутивах."
+        fi
+    else
+        print_error "Неподдерживаемая операционная система: $OSTYPE"
+        print_info "Поддерживаются: macOS, Ubuntu/Linux"
         exit 1
-    fi
-    
-    if [ ! -f /etc/debian_version ] && [ ! -f /etc/redhat-release ]; then
-        print_warning "Рекомендуется Ubuntu/Debian. Установка может не работать на других дистрибутивах."
     fi
 }
 
@@ -499,7 +509,14 @@ install_local() {
     # Устанавливаем зависимости
     print_info "Установка Python зависимостей..."
     pip install --upgrade pip
+    print_info "Установка зависимостей из requirements.txt..."
     pip install -r requirements.txt
+    
+    # Проверяем что установка прошла успешно
+    if [ $? -ne 0 ]; then
+        print_error "Ошибка установки зависимостей"
+        exit 1
+    fi
     
     # Проверяем установку ключевых модулей
     print_info "Проверка установки модулей..."
@@ -522,11 +539,19 @@ install_local() {
     fi
     
     # Создаем .env файл
+    print_info "Создание .env файла..."
     cat > .env << EOF
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 OPENAI_API_KEY=$OPENAI_API_KEY
 BOT_USERNAME=$BOT_USERNAME
 EOF
+    
+    # Проверяем что файл создался
+    if [ ! -f ".env" ]; then
+        print_error "Ошибка создания .env файла"
+        exit 1
+    fi
+    print_success ".env файл создан"
     
     print_success "Локальная установка завершена!"
     
