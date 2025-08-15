@@ -50,11 +50,11 @@ install_system_deps() {
     # Определяем пакетный менеджер
     if command -v apt-get &> /dev/null; then
         sudo apt-get update
-        sudo apt-get install -y python3 python3-pip python3-venv git curl
+        sudo apt-get install -y python3 python3-pip python3-venv python3.8-venv git curl
     elif command -v yum &> /dev/null; then
-        sudo yum install -y python3 python3-pip git curl
+        sudo yum install -y python3 python3-pip python3-venv git curl
     elif command -v dnf &> /dev/null; then
-        sudo dnf install -y python3 python3-pip git curl
+        sudo dnf install -y python3 python3-pip python3-venv git curl
     else
         print_error "Не найден поддерживаемый пакетный менеджер (apt, yum, dnf)"
         exit 1
@@ -79,6 +79,15 @@ check_pip() {
         install_system_deps
     fi
     print_success "pip3 найден"
+}
+
+# Проверка python3-venv
+check_venv() {
+    if ! python3 -c "import venv" &> /dev/null; then
+        print_error "python3-venv не найден. Устанавливаем..."
+        install_system_deps
+    fi
+    print_success "python3-venv найден"
 }
 
 # Интерактивный ввод данных
@@ -147,16 +156,47 @@ get_bot_config() {
     # Тип установки
     echo ""
     print_info "Выберите тип установки:"
+    echo ""
     echo "1) Локальная разработка (текущая папка)"
+    echo "   ✅ Рекомендуется для:"
+    echo "      • Тестирования и разработки"
+    echo "      • Первой установки"
+    echo "      • Пользователей без опыта с systemd"
+    echo "      • Быстрого запуска"
+    echo ""
     echo "2) Системная установка (systemd сервис)"
+    echo "   ✅ Рекомендуется для:"
+    echo "      • Продакшена на сервере"
+    echo "      • Автоматического запуска при перезагрузке"
+    echo "      • Продвинутых пользователей"
+    echo "      • Долгосрочного использования"
+    echo ""
     echo "3) Docker контейнер"
+    echo "   ✅ Рекомендуется для:"
+    echo "      • Изолированной среды"
+    echo "      • Простого развертывания"
+    echo "      • Пользователей с опытом Docker"
+    echo "      • Масштабирования"
+    echo ""
     
     while true; do
         read -p "Выберите вариант (1-3): " INSTALL_TYPE
         case $INSTALL_TYPE in
-            1) INSTALL_TYPE="local"; break ;;
-            2) INSTALL_TYPE="systemd"; break ;;
-            3) INSTALL_TYPE="docker"; break ;;
+            1) 
+                INSTALL_TYPE="local"
+                print_info "Выбрана локальная установка - отлично для начала!"
+                break 
+                ;;
+            2) 
+                INSTALL_TYPE="systemd"
+                print_info "Выбрана системная установка - бот будет работать как служба!"
+                break 
+                ;;
+            3) 
+                INSTALL_TYPE="docker"
+                print_info "Выбрана Docker установка - изолированная среда!"
+                break 
+                ;;
             *) print_error "Выберите 1, 2 или 3" ;;
         esac
     done
@@ -294,6 +334,7 @@ main() {
     check_os
     check_python
     check_pip
+    check_venv
     get_bot_config
     
     case $INSTALL_TYPE in
