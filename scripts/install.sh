@@ -3,9 +3,6 @@
 # Интерактивный скрипт установки Not Your Mama Bot для Ubuntu/Linux
 set -e
 
-# Включаем подробное логирование для отладки
-set -x
-
 # Обработчик сигналов для показа инструкций при прерывании
 trap 'echo ""; print_warning "Установка прервана пользователем"; show_error_instructions; exit 1' INT TERM
 
@@ -448,7 +445,7 @@ install_local() {
         if python3 -m venv venv; then
             print_success "Виртуальное окружение создано"
         else
-            print_error "Ошибка создания виртуального окружения"
+            print_error "Ошибка создания виртуального окружения через python3 -m venv"
             print_info "Пробуем альтернативный способ..."
             
             # Пробуем с virtualenv если доступен
@@ -504,19 +501,26 @@ install_local() {
     fi
     
     print_info "Активация виртуального окружения..."
-    source venv/bin/activate
+    if ! source venv/bin/activate; then
+        print_error "Ошибка активации виртуального окружения"
+        exit 1
+    fi
+    print_success "Виртуальное окружение активировано"
     
     # Устанавливаем зависимости
     print_info "Установка Python зависимостей..."
-    pip install --upgrade pip
-    print_info "Установка зависимостей из requirements.txt..."
-    pip install -r requirements.txt
+    print_info "Обновление pip..."
+    if ! pip install --upgrade pip; then
+        print_error "Ошибка обновления pip"
+        exit 1
+    fi
     
-    # Проверяем что установка прошла успешно
-    if [ $? -ne 0 ]; then
+    print_info "Установка зависимостей из requirements.txt..."
+    if ! pip install -r requirements.txt; then
         print_error "Ошибка установки зависимостей"
         exit 1
     fi
+    print_success "Зависимости установлены успешно"
     
     # Проверяем установку ключевых модулей
     print_info "Проверка установки модулей..."
