@@ -96,26 +96,35 @@ def chunk_text(s: str, n: int = MAX_CHUNK):
     return (s[i:i+n] for i in range(0, len(s), n))
 
 def web_search(query: str, num: int = 5) -> Optional[str]:
-    """Refactored search using DuckDuckGo with improved error handling and parsing."""
+    """Полностью переписанная функция поиска через DuckDuckGo"""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.news(query, max_results=num))
+            # Используем обычный поиск вместо news для более широких результатов
+            results = list(ddgs.text(query, max_results=num))
+            
             if not results:
-                return "No results found."
-
+                log.warning(f"No search results for query: {query}")
+                return None
+                
+            log.info(f"Found {len(results)} results for query: {query}")
+            
             lines = []
-            for r in results[:num]:
-                title = r.get("title", "No title")
-                link = r.get("href", "")
-                snippet = (r.get("body") or "")[:150]
-                if len(snippet) == 150:
-                    snippet += "..."
-                lines.append(f"• [{title}]({link}) — {snippet}")
+            for i, r in enumerate(results[:num], 1):
+                title = r.get("title", "Без заголовка")
+                link = r.get("link", "")
+                snippet = r.get("body", "")
+                
+                # Ограничиваем длину сниппета
+                if len(snippet) > 200:
+                    snippet = snippet[:200] + "..."
+                
+                lines.append(f"{i}. **{title}**\n   {snippet}\n   {link}\n")
+            
             return "\n".join(lines)
-
+            
     except Exception as e:
-        log.error(f"Search error: {e}")
-        return "Search is temporarily unavailable."
+        log.error(f"Search error for query '{query}': {e}")
+        return None
 
 async def send_reply(msg, text: str):
     for ch in chunk_text(text):
@@ -375,32 +384,44 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text       = msg.text.strip()
     text_lower = text.lower()
 
-    # Update the search trigger logic
+    # 1) ТРИГГЕР ПОИСКА (ставим раньше обычного ответа)
+    # ловим «интернет/сеть/поиск/гугл/гугли/гуглить/найд»
     if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", text_lower):
-        query = text.strip()  # Use the entire text as the query
+        # Извлекаем поисковый запрос, убирая триггерные слова
+        query = re.sub(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", "", text, flags=re.IGNORECASE).strip()
+        
+        # Если после удаления триггерных слов ничего не осталось, используем весь текст
+        if not query:
+            query = text.strip()
+        
+        log.info(f"Search request: '{query}'")
+        
+        # Выполняем поиск
         results_md = web_search(query)
-
-        if not results_md or results_md == "No results found.":
-            return await send_reply(msg, "Поиск в интернете временно недоступен или нет результатов.")
-
-        # Summarize the search results using OpenAI
+        
+        if not results_md:
+            return await send_reply(msg, "🔍 Поиск не дал результатов. Попробуйте другой запрос.")
+        
+        # Саммари найденного через OpenAI
         try:
             summary_resp = await openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system",
-                     "content": "Тебе дали список результатов поиска (заголовок, ссылка, сниппет). Кратко резюмируй по-русски с 2–5 пунктами и выводом."},
+                     "content": "Ты помощник для анализа результатов поиска. Кратко резюмируй найденную информацию на русском языке в 2-3 предложения."},
                     {"role": "user",
-                     "content": f"Сделай краткое резюме для следующего поиска:\n\n{results_md}"}
+                     "content": f"Проанализируй результаты поиска по запросу '{query}':\n\n{results_md}"}
                 ],
-                temperature=0.5,
+                temperature=0.3,
+                max_tokens=300
             )
             summary = summary_resp.choices[0].message.content
         except Exception as e:
-            log.error("OpenAI summary error: %s", e)
-            return await send_reply(msg, "Поиск в интернете временно недоступен.")
+            log.error(f"OpenAI summary error: {e}")
+            # Если не удалось создать саммари, отправляем сырые результаты
+            return await send_reply(msg, f"🔍 Результаты поиска по запросу «{query}»:\n\n{results_md}")
 
-        return await send_reply(msg, f"🔍 Кратко по запросу «{query}»:\n\n{summary}")
+        return await send_reply(msg, f"🔍 По запросу «{query}»:\n\n{summary}\n\n📋 Подробные результаты:\n{results_md}")
 
     # 2) ТРИГГЕР ОБЫЧНОГО ОТВЕТА
     is_reply_to_bot = (
