@@ -303,16 +303,26 @@ async def cmd_update(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         import os
         
         # Определяем тип установки
-        if os.path.exists("/opt/not-your-mama-bot/bot.py"):
+        current_dir = os.getcwd()
+        opt_exists = os.path.exists("/opt/not-your-mama-bot/bot.py")
+        local_exists = os.path.exists("scripts/update.sh")
+        
+        log.info(f"Отладка обновления: current_dir={current_dir}, opt_exists={opt_exists}, local_exists={local_exists}")
+        
+        if opt_exists:
             # Systemd установка
             update_script = "/opt/not-your-mama-bot/scripts/update.sh"
             working_dir = "/opt/not-your-mama-bot"
-        elif os.path.exists("scripts/update.sh"):
+            log.info(f"Выбрана systemd установка: {update_script}")
+        elif local_exists:
             # Локальная установка
             update_script = "./scripts/update.sh"
-            working_dir = os.getcwd()
+            working_dir = current_dir
+            log.info(f"Выбрана локальная установка: {update_script}")
         else:
-            await update.message.reply_text("❌ Скрипт обновления не найден.")
+            error_msg = f"❌ Скрипт обновления не найден. current_dir={current_dir}, opt_exists={opt_exists}, local_exists={local_exists}"
+            log.error(error_msg)
+            await update.message.reply_text(error_msg)
             return
         
         # Запускаем скрипт обновления
