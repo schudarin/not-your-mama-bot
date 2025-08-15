@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Универсальный интерактивный скрипт установки Not Your Mama Bot
+# Интерактивный скрипт установки Not Your Mama Bot для Ubuntu/Linux
 set -e
 
-echo "🤖 Not Your Mama Bot - Универсальный установщик"
-echo "=============================================="
+echo "🤖 Not Your Mama Bot - Установщик для Ubuntu/Linux"
+echo "================================================="
 echo ""
 
 # Цвета для вывода
@@ -31,20 +31,15 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Проверяем операционную систему
-detect_os() {
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if [ -f /etc/debian_version ]; then
-            OS="debian"
-        elif [ -f /etc/redhat-release ]; then
-            OS="redhat"
-        else
-            OS="linux"
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        OS="macos"
-    else
-        OS="unknown"
+# Проверяем, что это Ubuntu/Linux
+check_os() {
+    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+        print_error "Этот скрипт предназначен только для Ubuntu/Linux"
+        exit 1
+    fi
+    
+    if [ ! -f /etc/debian_version ] && [ ! -f /etc/redhat-release ]; then
+        print_warning "Рекомендуется Ubuntu/Debian. Установка может не работать на других дистрибутивах."
     fi
 }
 
@@ -52,25 +47,18 @@ detect_os() {
 install_system_deps() {
     print_info "Проверка и установка системных зависимостей..."
     
-    case $OS in
-        "debian"|"ubuntu")
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv git curl
-            ;;
-        "redhat"|"centos"|"fedora")
-            sudo yum install -y python3 python3-pip git curl || sudo dnf install -y python3 python3-pip git curl
-            ;;
-        "macos")
-            if ! command -v brew &> /dev/null; then
-                print_warning "Homebrew не установлен. Установите его с https://brew.sh"
-                exit 1
-            fi
-            brew install python3 git curl
-            ;;
-        *)
-            print_warning "Неизвестная ОС. Убедитесь, что установлены: python3, pip3, git"
-            ;;
-    esac
+    # Определяем пакетный менеджер
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip python3-venv git curl
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y python3 python3-pip git curl
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y python3 python3-pip git curl
+    else
+        print_error "Не найден поддерживаемый пакетный менеджер (apt, yum, dnf)"
+        exit 1
+    fi
 }
 
 # Проверка Python
@@ -100,8 +88,16 @@ get_bot_config() {
     echo "=============="
     
     # Telegram Bot Token
+    echo ""
+    print_info "📱 Получение Telegram Bot Token:"
+    echo "1. Откройте Telegram и найдите @BotFather"
+    echo "2. Отправьте команду /newbot"
+    echo "3. Следуйте инструкциям для создания бота"
+    echo "4. Скопируйте полученный токен (формат: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)"
+    echo ""
+    
     while true; do
-        read -p "Введите токен Telegram бота (от @BotFather): " TELEGRAM_BOT_TOKEN
+        read -p "Введите токен Telegram бота: " TELEGRAM_BOT_TOKEN
         if [[ $TELEGRAM_BOT_TOKEN =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
             break
         else
@@ -110,6 +106,13 @@ get_bot_config() {
     done
     
     # Bot Username
+    echo ""
+    print_info "🤖 Получение имени пользователя бота:"
+    echo "1. В том же чате с @BotFather найдите вашего бота"
+    echo "2. Скопируйте имя пользователя (без символа @)"
+    echo "3. Пример: если бот @my_awesome_bot, введите: my_awesome_bot"
+    echo ""
+    
     while true; do
         read -p "Введите имя пользователя бота (без @): " BOT_USERNAME
         if [[ $BOT_USERNAME =~ ^[a-zA-Z0-9_]+$ ]]; then
@@ -120,6 +123,15 @@ get_bot_config() {
     done
     
     # OpenAI API Key
+    echo ""
+    print_info "🔑 Получение OpenAI API Key:"
+    echo "1. Перейдите на https://platform.openai.com/api-keys"
+    echo "2. Войдите в аккаунт или создайте новый"
+    echo "3. Нажмите 'Create new secret key'"
+    echo "4. Скопируйте полученный ключ (начинается с 'sk-')"
+    echo "5. ⚠️  Сохраните ключ в безопасном месте - он больше не будет показан"
+    echo ""
+    
     while true; do
         read -p "Введите ключ OpenAI API: " OPENAI_API_KEY
         if [[ $OPENAI_API_KEY =~ ^sk-[A-Za-z0-9]+$ ]]; then
@@ -282,7 +294,7 @@ EOF
 
 # Основная функция
 main() {
-    detect_os
+    check_os
     check_python
     check_pip
     get_bot_config
