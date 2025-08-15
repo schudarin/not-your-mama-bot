@@ -96,28 +96,26 @@ def chunk_text(s: str, n: int = MAX_CHUNK):
     return (s[i:i+n] for i in range(0, len(s), n))
 
 def web_search(query: str, num: int = 5) -> Optional[str]:
-    """Простой и надежный поиск через DuckDuckGo"""
+    """Refactored search using DuckDuckGo with improved error handling and parsing."""
     try:
         with DDGS() as ddgs:
-            # Используем только news search - он работает стабильно
             results = list(ddgs.news(query, max_results=num))
-            
             if not results:
-                return None
-                
+                return "No results found."
+
             lines = []
             for r in results[:num]:
-                title = r.get("title", "Без заголовка")
+                title = r.get("title", "No title")
                 link = r.get("href", "")
-                snippet = (r.get("body") or "")[:150]  # Ограничиваем длину
+                snippet = (r.get("body") or "")[:150]
                 if len(snippet) == 150:
                     snippet += "..."
                 lines.append(f"• [{title}]({link}) — {snippet}")
             return "\n".join(lines)
-            
+
     except Exception as e:
-        log.warning(f"Search error: {e}")
-        return None
+        log.error(f"Search error: {e}")
+        return "Search is temporarily unavailable."
 
 async def send_reply(msg, text: str):
     for ch in chunk_text(text):
@@ -377,18 +375,15 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text       = msg.text.strip()
     text_lower = text.lower()
 
-    # 1) ТРИГГЕР ПОИСКА (ставим раньше обычного ответа)
-    # ловим «интернет/сеть/поиск/гугл/гугли/гуглить/найди…»
+    # Update the search trigger logic
     if re.search(r"(интернет|сеть|поиск|гугл(и|я|ить)?|погугл(и|я|ить)?|найд)", text_lower):
-        query = text  # можно усложнить парсер, но для начала берём весь текст
-        
-        # Простой поиск через DuckDuckGo
+        query = text.strip()  # Use the entire text as the query
         results_md = web_search(query)
-        
-        if not results_md:
-            return await send_reply(msg, "Поиск в интернете временно недоступен.")
 
-        # Саммари найденного через OpenAI
+        if not results_md or results_md == "No results found.":
+            return await send_reply(msg, "Поиск в интернете временно недоступен или нет результатов.")
+
+        # Summarize the search results using OpenAI
         try:
             summary_resp = await openai.chat.completions.create(
                 model="gpt-4o-mini",
@@ -402,7 +397,7 @@ async def chat(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             summary = summary_resp.choices[0].message.content
         except Exception as e:
-            log.warning("OpenAI summary error: %s", e)
+            log.error("OpenAI summary error: %s", e)
             return await send_reply(msg, "Поиск в интернете временно недоступен.")
 
         return await send_reply(msg, f"🔍 Кратко по запросу «{query}»:\n\n{summary}")
