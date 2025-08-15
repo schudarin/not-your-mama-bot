@@ -517,8 +517,45 @@ install_local() {
     
     print_info "Установка зависимостей из requirements.txt..."
     if ! pip install -r requirements.txt; then
-        print_warning "Ошибка установки зависимостей из requirements.txt"; print_info "Устанавливаем зависимости по отдельности..."; pip install python-telegram-bot>=20.0; pip install openai>=1.0.0; pip install requests>=2.25.0; pip install python-dotenv>=1.0.0; pip install aiohttp>=3.8.0; if ! pip install ddgs; then print_warning "Не удалось установить ddgs, пробуем альтернативы..."; if ! pip3 install ddgs; then print_info "Устанавливаем duckduckgo-search как альтернативу..."; if pip install duckduckgo-search>=4.0.0; then print_success "duckduckgo-search установлен как альтернатива"; else print_error "Не удалось установить ни ddgs, ни duckduckgo-search"; print_info "Попробуйте установить вручную: pip install ddgs"; exit 1; fi; else print_success "ddgs установлен через pip3"; fi; else print_success "ddgs установлен через pip"; fi
-        exit 1
+        print_warning "Ошибка установки зависимостей из requirements.txt"
+        print_info "Устанавливаем зависимости по отдельности..."
+        
+        # Устанавливаем основные зависимости
+        pip install python-telegram-bot>=20.0
+        pip install openai>=1.0.0
+        pip install requests>=2.25.0
+        pip install python-dotenv>=1.0.0
+        pip install aiohttp>=3.8.0
+        
+        # Проверяем версию Python для ddgs
+        PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        print_info "Версия Python: $PYTHON_VERSION"
+        
+        # Устанавливаем ddgs с учетом версии Python
+        if ! pip install ddgs>=9.0.0; then
+            print_warning "Не удалось установить ddgs>=9.0.0, пробуем более старую версию..."
+            if ! pip install ddgs>=8.0.0; then
+                print_warning "Не удалось установить ddgs>=8.0.0, пробуем через pip3..."
+                if ! pip3 install ddgs>=8.0.0; then
+                    print_warning "Не удалось установить ddgs, пробуем duckduckgo-search как fallback..."
+                    if pip install duckduckgo-search>=4.0.0; then
+                        print_success "duckduckgo-search установлен как fallback"
+                        # Обновляем requirements.txt для совместимости
+                        sed -i 's/ddgs>=9.0.0/duckduckgo-search>=4.0.0/' requirements.txt
+                    else
+                        print_error "Не удалось установить ни ddgs, ни duckduckgo-search"
+                        print_info "Попробуйте установить вручную: pip install ddgs"
+                        exit 1
+                    fi
+                else
+                    print_success "ddgs>=8.0.0 установлен через pip3"
+                fi
+            else
+                print_success "ddgs>=8.0.0 установлен через pip"
+            fi
+        else
+            print_success "ddgs>=9.0.0 установлен через pip"
+        fi
     fi
     print_success "Зависимости установлены успешно"
     
@@ -533,7 +570,7 @@ install_local() {
     if pip show ddgs &> /dev/null; then
         print_success "ddgs установлен"
     else
-        print_warning "ddgs не установлен, устанавливаем..."; if pip install ddgs; then print_success "ddgs установлен"; else print_error "ddgs не удалось установить"; fi
+        print_warning "ddgs не установлен, устанавливаем..."; if pip install ddgs>=9.0.0; then print_success "ddgs установлен"; else print_error "ddgs не удалось установить"; fi
     fi
     
     if pip show openai &> /dev/null; then
@@ -678,8 +715,45 @@ install_systemd() {
     
     print_info "Установка зависимостей из requirements.txt..."
     if ! pip install -r requirements.txt; then
-        print_warning "Ошибка установки зависимостей из requirements.txt"; print_info "Устанавливаем зависимости по отдельности..."; pip install python-telegram-bot>=20.0; pip install openai>=1.0.0; pip install requests>=2.25.0; pip install python-dotenv>=1.0.0; pip install aiohttp>=3.8.0; if ! pip install ddgs; then print_warning "Не удалось установить ddgs, пробуем альтернативы..."; if ! pip3 install ddgs; then print_info "Устанавливаем duckduckgo-search как альтернативу..."; if pip install duckduckgo-search>=4.0.0; then print_success "duckduckgo-search установлен как альтернатива"; else print_error "Не удалось установить ни ddgs, ни duckduckgo-search"; print_info "Попробуйте установить вручную: pip install ddgs"; exit 1; fi; else print_success "ddgs установлен через pip3"; fi; else print_success "ddgs установлен через pip"; fi
-        exit 1
+        print_warning "Ошибка установки зависимостей из requirements.txt"
+        print_info "Устанавливаем зависимости по отдельности..."
+        
+        # Устанавливаем основные зависимости
+        pip install python-telegram-bot>=20.0
+        pip install openai>=1.0.0
+        pip install requests>=2.25.0
+        pip install python-dotenv>=1.0.0
+        pip install aiohttp>=3.8.0
+        
+        # Проверяем версию Python для ddgs
+        PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        print_info "Версия Python: $PYTHON_VERSION"
+        
+        # Устанавливаем ddgs с учетом версии Python
+        if ! pip install ddgs>=9.0.0; then
+            print_warning "Не удалось установить ddgs>=9.0.0, пробуем более старую версию..."
+            if ! pip install ddgs>=8.0.0; then
+                print_warning "Не удалось установить ddgs>=8.0.0, пробуем через pip3..."
+                if ! pip3 install ddgs>=8.0.0; then
+                    print_warning "Не удалось установить ddgs, пробуем duckduckgo-search как fallback..."
+                    if pip install duckduckgo-search>=4.0.0; then
+                        print_success "duckduckgo-search установлен как fallback"
+                        # Обновляем requirements.txt для совместимости
+                        sed -i 's/ddgs>=9.0.0/duckduckgo-search>=4.0.0/' requirements.txt
+                    else
+                        print_error "Не удалось установить ни ddgs, ни duckduckgo-search"
+                        print_info "Попробуйте установить вручную: pip install ddgs"
+                        exit 1
+                    fi
+                else
+                    print_success "ddgs>=8.0.0 установлен через pip3"
+                fi
+            else
+                print_success "ddgs>=8.0.0 установлен через pip"
+            fi
+        else
+            print_success "ddgs>=9.0.0 установлен через pip"
+        fi
     fi
     print_success "Зависимости установлены успешно"
     
@@ -694,7 +768,7 @@ install_systemd() {
     if pip show ddgs &> /dev/null; then
         print_success "ddgs установлен"
     else
-        print_warning "ddgs не установлен, устанавливаем..."; if pip install ddgs; then print_success "ddgs установлен"; else print_error "ddgs не удалось установить"; fi
+        print_warning "ddgs не установлен, устанавливаем..."; if pip install ddgs>=9.0.0; then print_success "ddgs установлен"; else print_error "ddgs не удалось установить"; fi
     fi
     
     if pip show openai &> /dev/null; then

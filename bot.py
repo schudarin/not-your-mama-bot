@@ -25,7 +25,18 @@ from telegram.ext import (
     ApplicationBuilder, MessageHandler, CommandHandler,
     ContextTypes, filters
 )
-from ddgs import DDGS
+# Пробуем импортировать ddgs, если не получится - используем duckduckgo_search
+try:
+    from ddgs import DDGS
+    DDGS_AVAILABLE = True
+except ImportError:
+    try:
+        from duckduckgo_search import DDGS
+        DDGS_AVAILABLE = False
+        log.warning("ddgs недоступен, используем duckduckgo_search")
+    except ImportError:
+        log.error("Ни ddgs, ни duckduckgo_search не установлены!")
+        DDGS_AVAILABLE = None
 from openai import AsyncOpenAI
 import requests
 
@@ -100,11 +111,21 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
     import time
     
     # Проверяем версию библиотеки
-    try:
-        import ddgs
-        log.info(f"DDGS version: {ddgs.__version__}")
-    except:
-        log.warning("Could not get DDGS version")
+    if DDGS_AVAILABLE is True:
+        try:
+            import ddgs
+            log.info(f"DDGS version: {ddgs.__version__}")
+        except:
+            log.warning("Could not get DDGS version")
+    elif DDGS_AVAILABLE is False:
+        try:
+            import duckduckgo_search
+            log.info(f"DuckDuckGo Search version: {duckduckgo_search.__version__}")
+        except:
+            log.warning("Could not get DuckDuckGo Search version")
+    else:
+        log.error("No search library available")
+        return None
     
     try:
         log.info(f"Starting search for query: '{query}'")
@@ -112,15 +133,12 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
         # Добавляем небольшую задержку перед запросом
         time.sleep(0.5)
         
-        # Создаем DDGS объект с дополнительными параметрами
+        # Создаем DDGS объект
         try:
             ddgs = DDGS()
         except Exception as e:
             log.warning(f"Failed to create DDGS with default settings: {e}")
-            # Пробуем с пользовательскими заголовками
-            ddgs = DDGS(headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            })
+            return None
         
         try:
             # Пробуем разные методы поиска
@@ -142,16 +160,7 @@ def web_search(query: str, num: int = 5) -> Optional[str]:
                     log.info(f"News search successful for query: {query}")
                 except Exception as e2:
                     log.warning(f"News search also failed for '{query}': {e2}")
-                    
-                    # Метод 3: Поиск с другими параметрами
-                    try:
-                        time.sleep(1)
-                        log.info(f"Trying lite search for: '{query}'")
-                        results = list(ddgs.text(query, max_results=num, backend="lite"))
-                        log.info(f"Lite search successful for query: {query}")
-                    except Exception as e3:
-                        log.error(f"All search methods failed for '{query}': {e3}")
-                        return None
+                    return None
             
             if not results:
                 log.warning(f"No search results for query: {query}")
