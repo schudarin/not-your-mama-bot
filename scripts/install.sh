@@ -217,10 +217,55 @@ get_bot_config() {
 install_local() {
     print_info "Установка для локальной разработки..."
     
+    # Проверяем и устанавливаем python3-venv если нужно
+    if ! python3 -c "import venv" &> /dev/null; then
+        print_info "Устанавливаем python3-venv..."
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y python3-venv python3.8-venv
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y python3-venv
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y python3-venv
+        fi
+        
+        # Если все еще не работает, пробуем virtualenv
+        if ! python3 -c "import venv" &> /dev/null; then
+            print_info "Устанавливаем virtualenv как альтернативу..."
+            pip3 install --user virtualenv
+        fi
+    fi
+    
     # Создаем виртуальное окружение
     if [ ! -d "venv" ]; then
-        python3 -m venv venv
-        print_success "Виртуальное окружение создано"
+        print_info "Создание виртуального окружения..."
+        
+        # Пробуем стандартный способ
+        if python3 -m venv venv; then
+            print_success "Виртуальное окружение создано"
+        else
+            print_error "Ошибка создания виртуального окружения"
+            print_info "Пробуем альтернативный способ..."
+            
+            # Пробуем с virtualenv если доступен
+            if command -v virtualenv &> /dev/null; then
+                if virtualenv venv; then
+                    print_success "Виртуальное окружение создано через virtualenv"
+                else
+                    print_error "Не удалось создать виртуальное окружение"
+                    print_info "Установите python3-venv вручную:"
+                    echo "  sudo apt-get install python3-venv python3.8-venv"
+                    echo "  или: pip install virtualenv"
+                    exit 1
+                fi
+            else
+                print_error "Не удалось создать виртуальное окружение"
+                print_info "Установите python3-venv вручную:"
+                echo "  sudo apt-get install python3-venv python3.8-venv"
+                echo "  или: pip install virtualenv"
+                exit 1
+            fi
+        fi
     fi
     
     # Активируем виртуальное окружение
@@ -270,9 +315,29 @@ install_systemd() {
     cp -r . /opt/not-your-mama-bot/
     chown -R botuser:botuser /opt/not-your-mama-bot
     
+    # Проверяем и устанавливаем python3-venv если нужно
+    if ! python3 -c "import venv" &> /dev/null; then
+        print_info "Устанавливаем python3-venv..."
+        if command -v apt-get &> /dev/null; then
+            apt-get update
+            apt-get install -y python3-venv python3.8-venv
+        elif command -v yum &> /dev/null; then
+            yum install -y python3-venv
+        elif command -v dnf &> /dev/null; then
+            dnf install -y python3-venv
+        fi
+    fi
+    
     # Создаем виртуальное окружение
     cd /opt/not-your-mama-bot
-    python3 -m venv venv
+    if python3 -m venv venv; then
+        print_success "Виртуальное окружение создано"
+    else
+        print_error "Ошибка создания виртуального окружения"
+        print_info "Попробуйте установить python3-venv вручную:"
+        echo "  apt-get install python3-venv python3.8-venv"
+        exit 1
+    fi
     source venv/bin/activate
     pip install --upgrade pip
     pip install -r requirements.txt
